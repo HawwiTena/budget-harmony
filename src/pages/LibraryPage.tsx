@@ -182,7 +182,6 @@ export default function LibraryPage() {
                     <span className="text-xs text-muted-foreground block">{item.capexSubCategory}</span>
                   )}
                 </td>
-                </td>
                 <td className="px-4 py-3 text-sm text-foreground text-right">
                   ETB {item.defaultAmount.toLocaleString()}
                 </td>
