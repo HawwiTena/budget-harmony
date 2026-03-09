@@ -23,6 +23,19 @@ export interface User {
 
 export type BudgetCategory = "CAPEX" | "HR" | "Direct Expense";
 
+export type CapexSubCategory =
+  | "Computer & Related"
+  | "Furniture & Fittings"
+  | "Vehicles & Related"
+  | "Equipment & Machinery";
+
+export const CAPEX_SUB_CATEGORIES: CapexSubCategory[] = [
+  "Computer & Related",
+  "Furniture & Fittings",
+  "Vehicles & Related",
+  "Equipment & Machinery",
+];
+
 export type BudgetItemType = "new" | "replacement";
 
 export type BudgetStatus =
@@ -45,6 +58,7 @@ export interface LibraryItem {
   id: string;
   name: string;
   category: BudgetCategory;
+  capexSubCategory?: CapexSubCategory;
   description: string;
   defaultAmount: number;
   status: LibraryItemStatus;
@@ -59,6 +73,7 @@ export interface BudgetLineItem {
   libraryItemId: string;
   libraryItemName: string;
   category: BudgetCategory;
+  capexSubCategory?: CapexSubCategory;
   type: BudgetItemType;
   quantity: number;
   unitCost: number;
