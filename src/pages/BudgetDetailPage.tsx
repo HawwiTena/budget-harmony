@@ -187,6 +187,7 @@ export default function BudgetDetailPage() {
               </table>
               )}
             </div>
+          ))}
 
           {/* Approval Actions */}
           {canApproveThisBudget && (
