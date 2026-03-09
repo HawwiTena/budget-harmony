@@ -11,6 +11,13 @@ import BudgetDetailPage from "@/pages/BudgetDetailPage";
 import BudgetCreatePage from "@/pages/BudgetCreatePage";
 import ApprovalsPage from "@/pages/ApprovalsPage";
 import LibraryPage from "@/pages/LibraryPage";
+import MarketingBudgetPage from "@/pages/MarketingBudgetPage";
+import PropertyBudgetPage from "@/pages/PropertyBudgetPage";
+import ProcurementBudgetPage from "@/pages/ProcurementBudgetPage";
+import ITBudgetPage from "@/pages/ITBudgetPage";
+import OmnichannelBudgetPage from "@/pages/OmnichannelBudgetPage";
+import IBDBudgetPage from "@/pages/IBDBudgetPage";
+import HumanCapitalBudgetPage from "@/pages/HumanCapitalBudgetPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +37,13 @@ const App = () => (
               <Route path="/budgets/:id" element={<BudgetDetailPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/library" element={<LibraryPage />} />
+              <Route path="/dept/marketing" element={<MarketingBudgetPage />} />
+              <Route path="/dept/property" element={<PropertyBudgetPage />} />
+              <Route path="/dept/procurement" element={<ProcurementBudgetPage />} />
+              <Route path="/dept/it" element={<ITBudgetPage />} />
+              <Route path="/dept/omnichannel" element={<OmnichannelBudgetPage />} />
+              <Route path="/dept/ibd" element={<IBDBudgetPage />} />
+              <Route path="/dept/human-capital" element={<HumanCapitalBudgetPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>
