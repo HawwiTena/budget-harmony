@@ -6,9 +6,14 @@ import {
   FileText,
   Library,
   CheckSquare,
-  Settings,
+  Megaphone,
+  Car,
+  Package,
+  Monitor,
+  CreditCard,
+  TrendingUp,
+  Users,
   ChevronDown,
-  LogOut,
   User,
 } from "lucide-react";
 import {
@@ -38,6 +43,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   roles?: UserRole[];
+  section?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -45,6 +51,16 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Budget Requests", href: "/budgets", icon: FileText },
   { label: "Approvals", href: "/approvals", icon: CheckSquare, roles: ["district_manager", "branch_management_director", "retail_chief", "strategy_director", "department_chief", "budget_hearing_committee", "executive_committee", "board"] },
   { label: "Budget Library", href: "/library", icon: Library, roles: ["strategic_officer", "strategy_director"] },
+];
+
+const DEPT_NAV_ITEMS: NavItem[] = [
+  { label: "Marketing", href: "/dept/marketing", icon: Megaphone, section: "dept" },
+  { label: "Property — Vehicles", href: "/dept/property", icon: Car, section: "dept" },
+  { label: "Procurement CAPEX", href: "/dept/procurement", icon: Package, section: "dept" },
+  { label: "IT Budget", href: "/dept/it", icon: Monitor, section: "dept" },
+  { label: "Omnichannel Fees", href: "/dept/omnichannel", icon: CreditCard, section: "dept" },
+  { label: "IBD — FX Revenue", href: "/dept/ibd", icon: TrendingUp, section: "dept" },
+  { label: "Human Capital — HR", href: "/dept/human-capital", icon: Users, section: "dept" },
 ];
 
 export default function AppSidebar() {
@@ -71,7 +87,7 @@ export default function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {visibleItems.map(item => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href;
@@ -86,6 +102,31 @@ export default function AppSidebar() {
               }`}
             >
               <Icon className="w-4 h-4" />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        {/* Department Budgets Section */}
+        <div className="pt-4 pb-1">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium px-3 mb-2">
+            Departmental Budgets
+          </p>
+        </div>
+        {DEPT_NAV_ITEMS.map(item => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
               {item.label}
             </Link>
           );
