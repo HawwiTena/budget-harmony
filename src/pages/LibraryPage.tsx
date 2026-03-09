@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MOCK_LIBRARY_ITEMS } from "@/data/mockData";
-import { LibraryItem, BudgetCategory, LibraryItemStatus } from "@/types/budget";
+import { LibraryItem, BudgetCategory, LibraryItemStatus, CapexSubCategory, CAPEX_SUB_CATEGORIES } from "@/types/budget";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -178,6 +178,10 @@ export default function LibraryPage() {
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-xs font-medium text-muted-foreground">{item.category}</span>
+                  {item.capexSubCategory && (
+                    <span className="text-xs text-muted-foreground block">{item.capexSubCategory}</span>
+                  )}
+                </td>
                 </td>
                 <td className="px-4 py-3 text-sm text-foreground text-right">
                   ETB {item.defaultAmount.toLocaleString()}
@@ -227,6 +231,7 @@ function LibraryItemForm({ item, onSave, onCancel }: {
 }) {
   const [name, setName] = useState(item?.name || "");
   const [category, setCategory] = useState<string>(item?.category || "CAPEX");
+  const [capexSub, setCapexSub] = useState<string>(item?.capexSubCategory || "");
   const [description, setDescription] = useState(item?.description || "");
   const [amount, setAmount] = useState(item?.defaultAmount || 0);
 
@@ -238,7 +243,7 @@ function LibraryItemForm({ item, onSave, onCancel }: {
       </div>
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground uppercase tracking-wider">Category</Label>
-        <Select value={category} onValueChange={setCategory}>
+        <Select value={category} onValueChange={v => { setCategory(v); if (v !== "CAPEX") setCapexSub(""); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="CAPEX">CAPEX</SelectItem>
@@ -247,6 +252,19 @@ function LibraryItemForm({ item, onSave, onCancel }: {
           </SelectContent>
         </Select>
       </div>
+      {category === "CAPEX" && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wider">CAPEX Sub-Category</Label>
+          <Select value={capexSub} onValueChange={setCapexSub}>
+            <SelectTrigger><SelectValue placeholder="Select sub-category" /></SelectTrigger>
+            <SelectContent>
+              {CAPEX_SUB_CATEGORIES.map(sub => (
+                <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground uppercase tracking-wider">Description</Label>
         <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Brief description" />
@@ -256,7 +274,7 @@ function LibraryItemForm({ item, onSave, onCancel }: {
         <Input type="number" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} />
       </div>
       <div className="flex gap-3 pt-2">
-        <Button onClick={() => onSave({ name, category: category as BudgetCategory, description, defaultAmount: amount })} className="bg-accent text-accent-foreground hover:bg-accent/90">
+        <Button onClick={() => onSave({ name, category: category as BudgetCategory, capexSubCategory: category === "CAPEX" ? capexSub as CapexSubCategory : undefined, description, defaultAmount: amount })} className="bg-accent text-accent-foreground hover:bg-accent/90">
           {item ? "Update" : "Create"}
         </Button>
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
