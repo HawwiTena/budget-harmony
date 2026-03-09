@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MOCK_LIBRARY_ITEMS } from "@/data/mockData";
-import { BudgetCategory, BudgetItemType, BudgetLineItem } from "@/types/budget";
+import { BudgetCategory, BudgetItemType, BudgetLineItem, CAPEX_SUB_CATEGORIES } from "@/types/budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,7 @@ export default function BudgetCreatePage() {
       libraryItemId: lib.id,
       libraryItemName: lib.name,
       category: lib.category,
+      capexSubCategory: lib.capexSubCategory,
       type: "new",
       quantity: 1,
       unitCost: lib.defaultAmount,
@@ -135,25 +136,55 @@ export default function BudgetCreatePage() {
       {/* Library Items to Add */}
       <div className="bg-card border border-border rounded-lg p-5">
         <h3 className="text-sm font-semibold text-foreground mb-3">Add from Library — {activeTab}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {activeLibraryItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => addLineItem(item.id)}
-              className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground group-hover:text-accent">{item.name}</p>
-                <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-              <p className="text-xs font-medium text-foreground mt-1">ETB {item.defaultAmount.toLocaleString()}</p>
-            </button>
-          ))}
-          {activeLibraryItems.length === 0 && (
-            <p className="text-sm text-muted-foreground col-span-full">No active items in this category.</p>
-          )}
-        </div>
+        {activeTab === "CAPEX" ? (
+          <div className="space-y-5">
+            {CAPEX_SUB_CATEGORIES.map(sub => {
+              const subItems = activeLibraryItems.filter(i => i.capexSubCategory === sub);
+              if (subItems.length === 0) return null;
+              return (
+                <div key={sub}>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{sub}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {subItems.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => addLineItem(item.id)}
+                        className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-foreground group-hover:text-accent">{item.name}</p>
+                          <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                        <p className="text-xs font-medium text-foreground mt-1">ETB {item.defaultAmount.toLocaleString()}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {activeLibraryItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => addLineItem(item.id)}
+                className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground group-hover:text-accent">{item.name}</p>
+                  <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                <p className="text-xs font-medium text-foreground mt-1">ETB {item.defaultAmount.toLocaleString()}</p>
+              </button>
+            ))}
+          </div>
+        )}
+        {activeLibraryItems.length === 0 && (
+          <p className="text-sm text-muted-foreground">No active items in this category.</p>
+        )}
       </div>
 
       {/* Added Line Items */}
@@ -171,7 +202,7 @@ export default function BudgetCreatePage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-medium text-foreground">{item.libraryItemName}</p>
-                    <span className="text-xs text-muted-foreground">{item.category}</span>
+                    <span className="text-xs text-muted-foreground">{item.category}{item.capexSubCategory ? ` · ${item.capexSubCategory}` : ""}</span>
                   </div>
                   <button onClick={() => removeLineItem(item.id)} className="text-muted-foreground hover:text-destructive">
                     <Trash2 className="w-4 h-4" />

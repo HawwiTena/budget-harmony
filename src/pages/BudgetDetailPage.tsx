@@ -102,6 +102,53 @@ export default function BudgetDetailPage() {
               <div className="px-5 py-3 border-b border-border bg-muted/30">
                 <h3 className="text-sm font-semibold text-foreground">{section.label}</h3>
               </div>
+              {section.label === "CAPEX" ? (
+                <>
+                  {Array.from(new Set(section.items.map(i => i.capexSubCategory || "Other"))).map(sub => (
+                    <div key={sub}>
+                      <div className="px-5 py-2 bg-muted/10 border-b border-border">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{sub}</span>
+                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Item</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Type</th>
+                            <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Qty</th>
+                            <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Unit Cost</th>
+                            <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {section.items.filter(i => (i.capexSubCategory || "Other") === sub).map(item => (
+                            <tr key={item.id}>
+                              <td className="px-5 py-3">
+                                <p className="text-sm font-medium text-foreground">{item.libraryItemName}</p>
+                                <p className="text-xs text-muted-foreground">{item.justification}</p>
+                                {item.attachmentName && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-accent mt-1">
+                                    <Paperclip className="w-3 h-3" /> {item.attachmentName}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                  item.type === "replacement" ? "bg-accent/10 text-accent" : "bg-success/10 text-success"
+                                }`}>
+                                  {item.type}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-sm text-foreground text-right">{item.quantity}</td>
+                              <td className="px-5 py-3 text-sm text-foreground text-right">ETB {item.unitCost.toLocaleString()}</td>
+                              <td className="px-5 py-3 text-sm font-medium text-foreground text-right">ETB {item.totalCost.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </>
+              ) : (
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
@@ -138,6 +185,7 @@ export default function BudgetDetailPage() {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
           ))}
 
