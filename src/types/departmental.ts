@@ -1,6 +1,20 @@
+import { Currency } from "./budget";
+
 // ==================== DEPARTMENTAL BUDGET TYPES ====================
 
-export const USD_TO_BIRR_RATE = 130; // Exchange rate
+export const USD_TO_BIRR_RATE = 130;
+export const EURO_TO_BIRR_RATE = 140;
+
+export function convertToBirr(amount: number, currency: Currency): number {
+  switch (currency) {
+    case "USD": return amount * USD_TO_BIRR_RATE;
+    case "EURO": return amount * EURO_TO_BIRR_RATE;
+    case "ETB": return amount;
+  }
+}
+
+// ---- UnitType (WorkUnit) ----
+export type UnitType = "FUNCTION" | "DIVISION" | "DEPARTMENT" | "BRANCH" | "EXECUTIVE_OFFICE" | "BOARD_OFFICE";
 
 // ---- Marketing ----
 export const MARKETING_BUDGET_GROUPS = [
@@ -30,12 +44,14 @@ export type MarketingBudgetGroup = (typeof MARKETING_BUDGET_GROUPS)[number];
 export interface MarketingLineItem {
   id: string;
   group: MarketingBudgetGroup;
-  name: string;
-  type: "new" | "transferred";
-  amount: number;
-  currency: string;
-  amountBirr: number;
-  remark?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  currency: Currency;
+  totalAmountBirr: number;
+  remark: "NEW" | "TRANSFER";
+  metadata?: Record<string, unknown>;
 }
 
 // ---- Property / Vehicles ----
@@ -59,11 +75,13 @@ export type DepartmentName = (typeof DEPARTMENTS_LIST)[number];
 
 export interface VehicleLineItem {
   id: string;
+  description: string;
   carModel: string;
   quantity: number;
-  currency: string;
-  price: number;
-  priceBirr: number;
+  unitPrice: number;
+  totalAmount: number;
+  currency: Currency;
+  totalAmountBirr: number;
   requestingDepartment: DepartmentName;
 }
 
@@ -76,41 +94,59 @@ export interface ProcurementLineItem {
   capexItemName: string;
   department: DepartmentName;
   quantity: number;
+  unitPrice: number;
   contractOrderAmount: number;
   paymentIssued: number;
   totalRemainingUSD: number;
   totalRemainingBirr: number;
-  currency: "USD" | "ETB";
+  currency: Currency;
 }
 
 // ---- IT Budget ----
-export type ITBudgetCategory = "Software" | "RLF" | "Service Fees";
+export type ITBudgetCategory = "SOFTWARE" | "SERVICEFEE" | "RLF";
+
+export const IT_BUDGET_CATEGORIES: { value: ITBudgetCategory; label: string }[] = [
+  { value: "SOFTWARE", label: "Software" },
+  { value: "SERVICEFEE", label: "Service Fees" },
+  { value: "RLF", label: "RLF" },
+];
 
 export interface ITBudgetLineItem {
   id: string;
   category: ITBudgetCategory;
-  name: string;
-  amount: number;
-  currency: string;
-  amountBirr: number;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  currency: Currency;
+  birrFee: number;
   vat15: number;
   totalWithVat: number;
   remark?: string;
   submittedByDepartment: string;
-  status: "pending" | "approved" | "revision_requested";
+  status: "PENDING" | "APPROVED" | "REVISION_REQUIRED";
 }
 
 // ---- Omnichannel ----
-export type OmnichannelProvider = "MasterCard" | "Visa International" | "EthSwitch";
-export type OmnichannelFeeType = "Daily/Weekly" | "Monthly/Quarter";
+export type OmnichannelToWhom = "ETHSWICTH" | "VISA" | "MASTERCARD";
+
+export const OMNICHANNEL_PROVIDERS: { value: OmnichannelToWhom; label: string }[] = [
+  { value: "MASTERCARD", label: "MasterCard" },
+  { value: "VISA", label: "Visa International" },
+  { value: "ETHSWICTH", label: "EthSwitch" },
+];
 
 export interface OmnichannelFeeItem {
   id: string;
-  provider: OmnichannelProvider;
-  feeType: OmnichannelFeeType;
-  amount: number;
-  currency: string;
-  amountBirr: number;
+  toWhom: OmnichannelToWhom;
+  description: string;
+  dailyWeeklyFee: number;
+  monthlyQuarterlyFee: number;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  currency: Currency;
+  totalAmountBirr: number;
 }
 
 // ---- IBD ----
@@ -123,15 +159,18 @@ export type IBDMonth = (typeof IBD_MONTHS)[number];
 
 export interface IBDMonthlyEntry {
   month: IBDMonth;
-  fxInflow: number;
-  netFxRev: number;
-  surchargeGains: number;
+  monthNumber: number; // 1-12 matching schema
+  year: number;
+  projectedInflow: number;
+  serviceCharge: number;
+  netFxRevenue: number;
+  assumptions?: string;
 }
 
 // ---- Human Capital ----
 export interface HRTransferItem {
   id: string;
-  positionName: string; // from library
+  positionName: string;
   libraryItemId: string;
   department: DepartmentName;
   quantity: number;
@@ -139,3 +178,17 @@ export interface HRTransferItem {
   totalCost: number;
   remark?: string;
 }
+
+// ---- Rent (from schema) ----
+export type RentRemark = "RENEWED" | "NOTRENEWED";
+
+// ---- Departmental Budget Category (from schema BudgetCategory enum) ----
+export type DepartmentalBudgetCategory =
+  | "MARKETING"
+  | "PROCUREMENT"
+  | "OMNICHANNEL"
+  | "RENT"
+  | "IBD"
+  | "IT"
+  | "VEHICLE"
+  | "HR_TRANSFER";

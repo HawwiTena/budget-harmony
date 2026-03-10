@@ -26,17 +26,47 @@ export type BudgetCategory = "CAPEX" | "HR" | "Direct Expense";
 export type CapexSubCategory =
   | "Computer & Related"
   | "Furniture & Fittings"
-  | "Vehicles & Related"
-  | "Equipment & Machinery";
+  | "Motor Vehicles & Related"
+  | "Equipment";
 
 export const CAPEX_SUB_CATEGORIES: CapexSubCategory[] = [
   "Computer & Related",
   "Furniture & Fittings",
-  "Vehicles & Related",
-  "Equipment & Machinery",
+  "Motor Vehicles & Related",
+  "Equipment",
 ];
 
-export type BudgetItemType = "new" | "replacement";
+// Matches REMARKS enum from schema
+export type BudgetItemRemark = "NEW" | "TRANSFER" | "REPLACEMENT" | "OUTSOURCED";
+
+export const BUDGET_ITEM_REMARKS: { value: BudgetItemRemark; label: string }[] = [
+  { value: "NEW", label: "New" },
+  { value: "TRANSFER", label: "Transfer" },
+  { value: "REPLACEMENT", label: "Replacement" },
+  { value: "OUTSOURCED", label: "Outsourced" },
+];
+
+// Matches QUARTERS enum from schema
+export type Quarter = "QUARTER_1" | "QUARTER_2" | "QUARTER_3" | "QUARTER_4";
+
+export const QUARTERS: { value: Quarter; label: string }[] = [
+  { value: "QUARTER_1", label: "Quarter 1 (Jul–Sep)" },
+  { value: "QUARTER_2", label: "Quarter 2 (Oct–Dec)" },
+  { value: "QUARTER_3", label: "Quarter 3 (Jan–Mar)" },
+  { value: "QUARTER_4", label: "Quarter 4 (Apr–Jun)" },
+];
+
+// Matches CURRENCY enum from schema
+export type Currency = "ETB" | "USD" | "EURO";
+
+export const CURRENCIES: { value: Currency; label: string }[] = [
+  { value: "ETB", label: "ETB (Birr)" },
+  { value: "USD", label: "USD" },
+  { value: "EURO", label: "EURO" },
+];
+
+// Matches ApprovalAction enum from schema
+export type ApprovalAction = "PENDING" | "REVISION_REQUIRED" | "REJECTED" | "APPROVED";
 
 export type BudgetStatus =
   | "draft"
@@ -52,15 +82,53 @@ export type BudgetStatus =
   | "revision_requested"
   | "rejected";
 
-export type LibraryItemStatus = "active" | "inactive" | "pending_approval" | "rejected";
+// Matches LibraryStatus enum from schema
+export type LibraryItemStatus =
+  | "PENDING_CREATE"
+  | "PENDING_EDIT"
+  | "PENDING_DEACTIVATE"
+  | "ACTIVE"
+  | "INACTIVE"
+  | "REJECTED";
 
-export interface LibraryItem {
+export const LIBRARY_STATUS_LABELS: Record<LibraryItemStatus, string> = {
+  PENDING_CREATE: "Pending Create",
+  PENDING_EDIT: "Pending Edit",
+  PENDING_DEACTIVATE: "Pending Deactivate",
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  REJECTED: "Rejected",
+};
+
+// Matches JobGrade enum from schema
+export type JobGrade =
+  | "Grade_I" | "Grade_II" | "Grade_III" | "Grade_IV" | "Grade_V"
+  | "Grade_VI" | "Grade_VII" | "Grade_VIII" | "Grade_IX" | "Grade_X"
+  | "Grade_XI" | "Grade_XII" | "Grade_XIII";
+
+export const JOB_GRADES: JobGrade[] = [
+  "Grade_I", "Grade_II", "Grade_III", "Grade_IV", "Grade_V",
+  "Grade_VI", "Grade_VII", "Grade_VIII", "Grade_IX", "Grade_X",
+  "Grade_XI", "Grade_XII", "Grade_XIII",
+];
+
+// Matches JobCatagory enum from schema
+export type JobCategory = "MANAGERIAL" | "OPERATIONAL" | "TECHNICAL" | "CLERICAL" | "NONCLERICAL";
+
+export const JOB_CATEGORIES: { value: JobCategory; label: string }[] = [
+  { value: "MANAGERIAL", label: "Managerial" },
+  { value: "OPERATIONAL", label: "Operational" },
+  { value: "TECHNICAL", label: "Technical" },
+  { value: "CLERICAL", label: "Clerical" },
+  { value: "NONCLERICAL", label: "Non-Clerical" },
+];
+
+// ---- Library Item types matching schema models ----
+
+// Base library item
+export interface LibraryItemBase {
   id: string;
-  name: string;
   category: BudgetCategory;
-  capexSubCategory?: CapexSubCategory;
-  description: string;
-  defaultAmount: number;
   status: LibraryItemStatus;
   createdBy: string;
   approvedBy?: string;
@@ -68,19 +136,78 @@ export interface LibraryItem {
   updatedAt: string;
 }
 
+// Matches CapexLibrary model
+export interface CapexLibraryItem extends LibraryItemBase {
+  category: "CAPEX";
+  itemName: string;
+  itemCategory: CapexSubCategory;
+  unitOfMeasurement: string;
+  unitPrice: number;
+}
+
+// Matches HRPositions model
+export interface HRLibraryItem extends LibraryItemBase {
+  category: "HR";
+  jobTitle: string;
+  jobGrade: JobGrade;
+  jobCategory: JobCategory;
+  workUnitId?: number;
+  baseSalary: number;
+  cashIndemnity: number;
+  hardshipAllowance: number;
+  laundryAllowance: number;
+  transportationAllowance: number;
+  vehicleAllowance: number;
+  positionAllowance: number;
+  mobileAllowance: number;
+}
+
+// Matches DirectExpense model
+export interface DirectExpenseLibraryItem extends LibraryItemBase {
+  category: "Direct Expense";
+  expenseCategory: string;
+  description: string;
+}
+
+export type LibraryItem = CapexLibraryItem | HRLibraryItem | DirectExpenseLibraryItem;
+
+// Helper to get display name
+export function getLibraryItemName(item: LibraryItem): string {
+  switch (item.category) {
+    case "CAPEX": return item.itemName;
+    case "HR": return item.jobTitle;
+    case "Direct Expense": return item.description;
+  }
+}
+
+// Helper to get default amount
+export function getLibraryItemAmount(item: LibraryItem): number {
+  switch (item.category) {
+    case "CAPEX": return item.unitPrice;
+    case "HR": return item.baseSalary + item.cashIndemnity + item.hardshipAllowance +
+      item.laundryAllowance + item.transportationAllowance + item.vehicleAllowance +
+      item.positionAllowance + item.mobileAllowance;
+    case "Direct Expense": return 0;
+  }
+}
+
+// Matches BudgetDetail model
 export interface BudgetLineItem {
   id: string;
   libraryItemId: string;
   libraryItemName: string;
   category: BudgetCategory;
   capexSubCategory?: CapexSubCategory;
-  type: BudgetItemType;
+  amount: number;
+  purposeAndNecessity: string;
+  desiredQuarterForProcurement: Quarter;
+  remark: BudgetItemRemark;
+  documentId?: string;
+  documentName?: string;
+  // Calculated
   quantity: number;
   unitCost: number;
   totalCost: number;
-  justification: string;
-  attachmentUrl?: string;
-  attachmentName?: string;
 }
 
 export interface ApprovalStep {
@@ -90,6 +217,7 @@ export interface ApprovalStep {
   approvedAt?: string;
   comment?: string;
   action?: "approved" | "revision_requested" | "rejected";
+  onBehalfOf?: string;
 }
 
 export interface BudgetRequest {
@@ -102,6 +230,7 @@ export interface BudgetRequest {
   department?: string;
   district?: string;
   status: BudgetStatus;
+  currentStep: number;
   lineItems: BudgetLineItem[];
   totalAmount: number;
   approvalChain: ApprovalStep[];
