@@ -144,26 +144,29 @@ export default function BudgetCreatePage() {
         {activeTab === "CAPEX" ? (
           <div className="space-y-5">
             {CAPEX_SUB_CATEGORIES.map(sub => {
-              const subItems = activeLibraryItems.filter(i => i.category === "CAPEX" && i.itemCategory === sub);
+              const subItems = activeLibraryItems.filter(i => i.category === "CAPEX" && (i as import("@/types/budget").CapexLibraryItem).itemCategory === sub);
               if (subItems.length === 0) return null;
               return (
                 <div key={sub}>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{sub}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {subItems.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => addLineItem(item.id)}
-                        className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-foreground group-hover:text-accent">{item.itemName}</p>
-                          <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{item.unitOfMeasurement}</p>
-                        <p className="text-xs font-medium text-foreground mt-1">ETB {item.unitPrice.toLocaleString()}</p>
-                      </button>
-                    ))}
+                    {subItems.map(item => {
+                      const capex = item as import("@/types/budget").CapexLibraryItem;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => addLineItem(item.id)}
+                          className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-foreground group-hover:text-accent">{capex.itemName}</p>
+                            <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{capex.unitOfMeasurement}</p>
+                          <p className="text-xs font-medium text-foreground mt-1">ETB {capex.unitPrice.toLocaleString()}</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
