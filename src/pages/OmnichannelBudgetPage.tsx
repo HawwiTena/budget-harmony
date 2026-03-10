@@ -6,35 +6,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { OmnichannelFeeItem, OmnichannelProvider, OmnichannelFeeType, USD_TO_BIRR_RATE } from "@/types/departmental";
-
-const PROVIDERS: OmnichannelProvider[] = ["MasterCard", "Visa International", "EthSwitch"];
-const FEE_TYPES: OmnichannelFeeType[] = ["Daily/Weekly", "Monthly/Quarter"];
+import { OmnichannelFeeItem, OmnichannelToWhom, OMNICHANNEL_PROVIDERS, convertToBirr } from "@/types/departmental";
+import { Currency, CURRENCIES } from "@/types/budget";
 
 export default function OmnichannelBudgetPage() {
   const [items, setItems] = useState<OmnichannelFeeItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const [formProvider, setFormProvider] = useState<OmnichannelProvider>("MasterCard");
-  const [formFeeType, setFormFeeType] = useState<OmnichannelFeeType>("Daily/Weekly");
-  const [formAmount, setFormAmount] = useState("");
-  const [formCurrency, setFormCurrency] = useState("USD");
+  const [formToWhom, setFormToWhom] = useState<OmnichannelToWhom>("MASTERCARD");
+  const [formDescription, setFormDescription] = useState("");
+  const [formDailyWeekly, setFormDailyWeekly] = useState("");
+  const [formMonthlyQuarterly, setFormMonthlyQuarterly] = useState("");
+  const [formQuantity, setFormQuantity] = useState("1");
+  const [formUnitPrice, setFormUnitPrice] = useState("");
+  const [formCurrency, setFormCurrency] = useState<Currency>("USD");
 
-  const totalBirr = items.reduce((s, i) => s + i.amountBirr, 0);
+  const totalBirr = items.reduce((s, i) => s + i.totalAmountBirr, 0);
 
   const handleAdd = () => {
-    if (!formAmount) return;
-    const amount = parseFloat(formAmount);
-    const amountBirr = formCurrency === "USD" ? amount * USD_TO_BIRR_RATE : amount;
+    if (!formDescription) return;
+    const unitPrice = parseFloat(formUnitPrice) || 0;
+    const quantity = parseInt(formQuantity) || 1;
+    const dailyWeeklyFee = parseFloat(formDailyWeekly) || 0;
+    const monthlyQuarterlyFee = parseFloat(formMonthlyQuarterly) || 0;
+    const totalAmount = unitPrice * quantity;
+    const totalAmountBirr = convertToBirr(totalAmount, formCurrency);
+
     setItems(prev => [...prev, {
       id: crypto.randomUUID(),
-      provider: formProvider,
-      feeType: formFeeType,
-      amount,
+      toWhom: formToWhom,
+      description: formDescription,
+      dailyWeeklyFee,
+      monthlyQuarterlyFee,
+      quantity,
+      unitPrice,
+      totalAmount,
       currency: formCurrency,
-      amountBirr,
+      totalAmountBirr,
     }]);
-    setFormAmount("");
+    setFormDescription(""); setFormDailyWeekly(""); setFormMonthlyQuarterly("");
+    setFormUnitPrice(""); setFormQuantity("1");
     setDialogOpen(false);
   };
 
@@ -62,13 +73,13 @@ export default function OmnichannelBudgetPage() {
 
       {/* Provider cards */}
       <div className="grid grid-cols-3 gap-4">
-        {PROVIDERS.map(provider => {
-          const pItems = items.filter(i => i.provider === provider);
-          const pTotal = pItems.reduce((s, i) => s + i.amountBirr, 0);
+        {OMNICHANNEL_PROVIDERS.map(provider => {
+          const pItems = items.filter(i => i.toWhom === provider.value);
+          const pTotal = pItems.reduce((s, i) => s + i.totalAmountBirr, 0);
           return (
-            <Card key={provider}>
+            <Card key={provider.value}>
               <CardContent className="p-4">
-                <h3 className="font-medium text-foreground">{provider}</h3>
+                <h3 className="font-medium text-foreground">{provider.label}</h3>
                 <p className="text-xs text-muted-foreground">{pItems.length} fee entries</p>
                 <p className="text-lg font-bold mt-2">{pTotal.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">ETB</span></p>
               </CardContent>
@@ -90,35 +101,43 @@ export default function OmnichannelBudgetPage() {
               <DialogHeader><DialogTitle>Add Fee Entry</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
                 <div>
-                  <label className="text-sm font-medium text-foreground">Provider</label>
-                  <Select value={formProvider} onValueChange={v => setFormProvider(v as OmnichannelProvider)}>
+                  <label className="text-sm font-medium text-foreground">To Whom</label>
+                  <Select value={formToWhom} onValueChange={v => setFormToWhom(v as OmnichannelToWhom)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {PROVIDERS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      {OMNICHANNEL_PROVIDERS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground">Fee Type</label>
-                  <Select value={formFeeType} onValueChange={v => setFormFeeType(v as OmnichannelFeeType)}>
-                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {FEE_TYPES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <label className="text-sm font-medium text-foreground">Description</label>
+                  <Input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="Fee description..." className="mt-1" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Amount</label>
-                    <Input type="number" value={formAmount} onChange={e => setFormAmount(e.target.value)} className="mt-1" />
+                    <label className="text-sm font-medium text-foreground">Daily/Weekly Fee</label>
+                    <Input type="number" value={formDailyWeekly} onChange={e => setFormDailyWeekly(e.target.value)} placeholder="0.00" className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Monthly/Quarterly Fee</label>
+                    <Input type="number" value={formMonthlyQuarterly} onChange={e => setFormMonthlyQuarterly(e.target.value)} placeholder="0.00" className="mt-1" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Quantity</label>
+                    <Input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Unit Price</label>
+                    <Input type="number" value={formUnitPrice} onChange={e => setFormUnitPrice(e.target.value)} placeholder="0.00" className="mt-1" />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">Currency</label>
-                    <Select value={formCurrency} onValueChange={setFormCurrency}>
+                    <Select value={formCurrency} onValueChange={v => setFormCurrency(v as Currency)}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="ETB">ETB</SelectItem>
+                        {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -135,20 +154,26 @@ export default function OmnichannelBudgetPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Fee Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Amount (ETB)</TableHead>
+                  <TableHead>To Whom</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Daily/Weekly</TableHead>
+                  <TableHead className="text-right">Monthly/Quarter</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Total (ETB)</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map(item => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.provider}</TableCell>
-                    <TableCell>{item.feeType}</TableCell>
-                    <TableCell className="text-right">{item.amount.toLocaleString()} {item.currency}</TableCell>
-                    <TableCell className="text-right font-medium">{item.amountBirr.toLocaleString()} ETB</TableCell>
+                    <TableCell className="font-medium">{OMNICHANNEL_PROVIDERS.find(p => p.value === item.toWhom)?.label}</TableCell>
+                    <TableCell>{item.description}</TableCell>
+                    <TableCell className="text-right">{item.dailyWeeklyFee.toLocaleString()} {item.currency}</TableCell>
+                    <TableCell className="text-right">{item.monthlyQuarterlyFee.toLocaleString()} {item.currency}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">{item.unitPrice.toLocaleString()} {item.currency}</TableCell>
+                    <TableCell className="text-right font-medium">{item.totalAmountBirr.toLocaleString()} ETB</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                     </TableCell>

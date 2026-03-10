@@ -1,11 +1,11 @@
 import { useParams, Link } from "react-router-dom";
 import { MOCK_BUDGET_REQUESTS } from "@/data/mockData";
-import { APPROVAL_STAGES_BRANCH, APPROVAL_STAGES_DEPARTMENT } from "@/types/budget";
+import { APPROVAL_STAGES_BRANCH, APPROVAL_STAGES_DEPARTMENT, BUDGET_ITEM_REMARKS, QUARTERS } from "@/types/budget";
 import { useAuth } from "@/contexts/AuthContext";
 import StatusBadge from "@/components/StatusBadge";
 import ApprovalTimeline from "@/components/ApprovalTimeline";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Paperclip } from "lucide-react";
+import { ArrowLeft, Paperclip } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -51,6 +51,9 @@ export default function BudgetDetailPage() {
     toast.success(action === "approve" ? "Budget approved successfully" : "Revision requested");
   };
 
+  const getRemarkLabel = (remark: string) => BUDGET_ITEM_REMARKS.find(r => r.value === remark)?.label || remark;
+  const getQuarterLabel = (q: string) => QUARTERS.find(qr => qr.value === q)?.label || q;
+
   return (
     <div className="space-y-8 animate-slide-in">
       <Link to="/budgets" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
@@ -68,35 +71,30 @@ export default function BudgetDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Summary */}
           <div className="bg-card border border-border rounded-lg p-5">
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Amount</p>
-                <p className="text-xl font-display font-bold text-foreground mt-1">
-                  ETB {budget.totalAmount.toLocaleString()}
-                </p>
+                <p className="text-xl font-display font-bold text-foreground mt-1">ETB {budget.totalAmount.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Line Items</p>
                 <p className="text-xl font-display font-bold text-foreground mt-1">{budget.lineItems.length}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Categories</p>
-                <p className="text-xl font-display font-bold text-foreground mt-1">
-                  {new Set(budget.lineItems.map(i => i.category)).size}
-                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Current Step</p>
+                <p className="text-xl font-display font-bold text-foreground mt-1">{budget.currentStep} / {stages.length}</p>
               </div>
             </div>
           </div>
 
           {/* Line Items by Category */}
           {[
-            { label: "CAPEX", items: capexItems, color: "accent" },
-            { label: "HR", items: hrItems, color: "info" },
-            { label: "Direct Expense", items: directItems, color: "warning" },
+            { label: "CAPEX", items: capexItems },
+            { label: "HR", items: hrItems },
+            { label: "Direct Expense", items: directItems },
           ].map(section => section.items.length > 0 && (
             <div key={section.label} className="bg-card border border-border rounded-lg overflow-hidden">
               <div className="px-5 py-3 border-b border-border bg-muted/30">
@@ -113,7 +111,8 @@ export default function BudgetDetailPage() {
                         <thead>
                           <tr className="border-b border-border">
                             <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Item</th>
-                            <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Type</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Remark</th>
+                            <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Quarter</th>
                             <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Qty</th>
                             <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Unit Cost</th>
                             <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Total</th>
@@ -124,20 +123,23 @@ export default function BudgetDetailPage() {
                             <tr key={item.id}>
                               <td className="px-5 py-3">
                                 <p className="text-sm font-medium text-foreground">{item.libraryItemName}</p>
-                                <p className="text-xs text-muted-foreground">{item.justification}</p>
-                                {item.attachmentName && (
+                                <p className="text-xs text-muted-foreground">{item.purposeAndNecessity}</p>
+                                {item.documentName && (
                                   <span className="inline-flex items-center gap-1 text-xs text-accent mt-1">
-                                    <Paperclip className="w-3 h-3" /> {item.attachmentName}
+                                    <Paperclip className="w-3 h-3" /> {item.documentName}
                                   </span>
                                 )}
                               </td>
                               <td className="px-5 py-3">
                                 <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                                  item.type === "replacement" ? "bg-accent/10 text-accent" : "bg-success/10 text-success"
+                                  item.remark === "REPLACEMENT" ? "bg-accent/10 text-accent" :
+                                  item.remark === "TRANSFER" ? "bg-warning/10 text-warning" :
+                                  "bg-success/10 text-success"
                                 }`}>
-                                  {item.type}
+                                  {getRemarkLabel(item.remark)}
                                 </span>
                               </td>
+                              <td className="px-5 py-3 text-xs text-muted-foreground">{getQuarterLabel(item.desiredQuarterForProcurement)}</td>
                               <td className="px-5 py-3 text-sm text-foreground text-right">{item.quantity}</td>
                               <td className="px-5 py-3 text-sm text-foreground text-right">ETB {item.unitCost.toLocaleString()}</td>
                               <td className="px-5 py-3 text-sm font-medium text-foreground text-right">ETB {item.totalCost.toLocaleString()}</td>
@@ -149,42 +151,46 @@ export default function BudgetDetailPage() {
                   ))}
                 </>
               ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Item</th>
-                    <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Type</th>
-                    <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Qty</th>
-                    <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Unit Cost</th>
-                    <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {section.items.map(item => (
-                    <tr key={item.id}>
-                      <td className="px-5 py-3">
-                        <p className="text-sm font-medium text-foreground">{item.libraryItemName}</p>
-                        <p className="text-xs text-muted-foreground">{item.justification}</p>
-                        {item.attachmentName && (
-                          <span className="inline-flex items-center gap-1 text-xs text-accent mt-1">
-                            <Paperclip className="w-3 h-3" /> {item.attachmentName}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                          item.type === "replacement" ? "bg-accent/10 text-accent" : "bg-success/10 text-success"
-                        }`}>
-                          {item.type}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-foreground text-right">{item.quantity}</td>
-                      <td className="px-5 py-3 text-sm text-foreground text-right">ETB {item.unitCost.toLocaleString()}</td>
-                      <td className="px-5 py-3 text-sm font-medium text-foreground text-right">ETB {item.totalCost.toLocaleString()}</td>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Item</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Remark</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-5 py-2">Quarter</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Qty</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Unit Cost</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground px-5 py-2">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {section.items.map(item => (
+                      <tr key={item.id}>
+                        <td className="px-5 py-3">
+                          <p className="text-sm font-medium text-foreground">{item.libraryItemName}</p>
+                          <p className="text-xs text-muted-foreground">{item.purposeAndNecessity}</p>
+                          {item.documentName && (
+                            <span className="inline-flex items-center gap-1 text-xs text-accent mt-1">
+                              <Paperclip className="w-3 h-3" /> {item.documentName}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                            item.remark === "REPLACEMENT" ? "bg-accent/10 text-accent" :
+                            item.remark === "TRANSFER" ? "bg-warning/10 text-warning" :
+                            "bg-success/10 text-success"
+                          }`}>
+                            {getRemarkLabel(item.remark)}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-xs text-muted-foreground">{getQuarterLabel(item.desiredQuarterForProcurement)}</td>
+                        <td className="px-5 py-3 text-sm text-foreground text-right">{item.quantity}</td>
+                        <td className="px-5 py-3 text-sm text-foreground text-right">ETB {item.unitCost.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-sm font-medium text-foreground text-right">ETB {item.totalCost.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           ))}
@@ -200,10 +206,7 @@ export default function BudgetDetailPage() {
                 className="min-h-[80px]"
               />
               <div className="flex gap-3">
-                <Button
-                  onClick={() => handleAction("approve")}
-                  className="bg-success text-success-foreground hover:bg-success/90"
-                >
+                <Button onClick={() => handleAction("approve")} className="bg-success text-success-foreground hover:bg-success/90">
                   Approve Budget
                 </Button>
                 <Button
@@ -219,7 +222,7 @@ export default function BudgetDetailPage() {
           )}
         </div>
 
-        {/* Sidebar - Approval Timeline */}
+        {/* Sidebar */}
         <div>
           <div className="bg-card border border-border rounded-lg p-5">
             <h3 className="text-sm font-semibold text-foreground mb-4">Approval Progress</h3>

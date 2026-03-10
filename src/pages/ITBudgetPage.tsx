@@ -8,14 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Monitor, Check, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ITBudgetLineItem, ITBudgetCategory, USD_TO_BIRR_RATE } from "@/types/departmental";
+import { ITBudgetLineItem, ITBudgetCategory, IT_BUDGET_CATEGORIES, convertToBirr } from "@/types/departmental";
+import { Currency, CURRENCIES } from "@/types/budget";
 import { useAuth } from "@/contexts/AuthContext";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-const IT_CATEGORIES: ITBudgetCategory[] = ["Software", "RLF", "Service Fees"];
-
-// Mock departments under IT chiefs
 const IT_SUB_DEPARTMENTS = [
   "Application Development",
   "Infrastructure & Operations",
@@ -33,62 +30,73 @@ export default function ITBudgetPage() {
 
   const [items, setItems] = useState<ITBudgetLineItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<ITBudgetCategory>("Software");
+  const [activeCategory, setActiveCategory] = useState<ITBudgetCategory>("SOFTWARE");
   const [viewMode, setViewMode] = useState<"submit" | "consolidated">(isChief ? "consolidated" : "submit");
 
-  // Form
-  const [formName, setFormName] = useState("");
-  const [formAmount, setFormAmount] = useState("");
-  const [formCurrency, setFormCurrency] = useState("USD");
+  const [formDescription, setFormDescription] = useState("");
+  const [formQuantity, setFormQuantity] = useState("1");
+  const [formUnitPrice, setFormUnitPrice] = useState("");
+  const [formCurrency, setFormCurrency] = useState<Currency>("USD");
   const [formRemark, setFormRemark] = useState("");
   const [formDept, setFormDept] = useState(IT_SUB_DEPARTMENTS[0]);
 
-  // Mock consolidated items from sub-departments
-  const [consolidatedItems, setConsolidatedItems] = useState<ITBudgetLineItem[]>([
-    { id: "it-c1", category: "Software", name: "Oracle DB License", amount: 25000, currency: "USD", amountBirr: 25000 * USD_TO_BIRR_RATE, vat15: Math.round(25000 * USD_TO_BIRR_RATE / 0.85 * 0.15), totalWithVat: Math.round(25000 * USD_TO_BIRR_RATE + 25000 * USD_TO_BIRR_RATE / 0.85 * 0.15), remark: "Annual license renewal", submittedByDepartment: "Database Administration", status: "pending" },
-    { id: "it-c2", category: "Service Fees", name: "AWS Cloud Services", amount: 18000, currency: "USD", amountBirr: 18000 * USD_TO_BIRR_RATE, vat15: Math.round(18000 * USD_TO_BIRR_RATE / 0.85 * 0.15), totalWithVat: Math.round(18000 * USD_TO_BIRR_RATE + 18000 * USD_TO_BIRR_RATE / 0.85 * 0.15), remark: "Monthly hosting", submittedByDepartment: "Infrastructure & Operations", status: "pending" },
-    { id: "it-c3", category: "RLF", name: "Microsoft 365 E3", amount: 12000, currency: "USD", amountBirr: 12000 * USD_TO_BIRR_RATE, vat15: Math.round(12000 * USD_TO_BIRR_RATE / 0.85 * 0.15), totalWithVat: Math.round(12000 * USD_TO_BIRR_RATE + 12000 * USD_TO_BIRR_RATE / 0.85 * 0.15), remark: "500 seats", submittedByDepartment: "Application Development", status: "pending" },
-  ]);
-
-  const calcVat = (amountBirr: number) => {
-    const base = amountBirr / 0.85;
-    return Math.round(base * 0.15);
+  const calcVatFields = (birrFee: number) => {
+    const base = birrFee / 0.85;
+    const vat15 = Math.round(base * 0.15);
+    return { vat15, totalWithVat: birrFee + vat15 };
   };
 
+  const [consolidatedItems, setConsolidatedItems] = useState<ITBudgetLineItem[]>(() => {
+    const makeItem = (id: string, cat: ITBudgetCategory, desc: string, qty: number, price: number, curr: Currency, remark: string, dept: string): ITBudgetLineItem => {
+      const totalAmount = qty * price;
+      const birrFee = convertToBirr(totalAmount, curr);
+      const { vat15, totalWithVat } = calcVatFields(birrFee);
+      return { id, category: cat, description: desc, quantity: qty, unitPrice: price, totalAmount, currency: curr, birrFee, vat15, totalWithVat, remark, submittedByDepartment: dept, status: "PENDING" };
+    };
+    return [
+      makeItem("it-c1", "SOFTWARE", "Oracle DB License", 1, 25000, "USD", "Annual license renewal", "Database Administration"),
+      makeItem("it-c2", "SERVICEFEE", "AWS Cloud Services", 1, 18000, "USD", "Monthly hosting", "Infrastructure & Operations"),
+      makeItem("it-c3", "RLF", "Microsoft 365 E3", 500, 24, "USD", "500 seats", "Application Development"),
+    ];
+  });
+
   const handleAdd = () => {
-    if (!formName || !formAmount) return;
-    const amount = parseFloat(formAmount);
-    const amountBirr = formCurrency === "USD" ? amount * USD_TO_BIRR_RATE : amount;
-    const vat15 = calcVat(amountBirr);
-    const totalWithVat = amountBirr + vat15;
+    if (!formDescription || !formUnitPrice) return;
+    const unitPrice = parseFloat(formUnitPrice);
+    const quantity = parseInt(formQuantity) || 1;
+    const totalAmount = unitPrice * quantity;
+    const birrFee = convertToBirr(totalAmount, formCurrency);
+    const { vat15, totalWithVat } = calcVatFields(birrFee);
 
     const newItem: ITBudgetLineItem = {
       id: crypto.randomUUID(),
       category: activeCategory,
-      name: formName,
-      amount,
+      description: formDescription,
+      quantity,
+      unitPrice,
+      totalAmount,
       currency: formCurrency,
-      amountBirr,
+      birrFee,
       vat15,
       totalWithVat,
       remark: formRemark || undefined,
       submittedByDepartment: formDept,
-      status: "pending",
+      status: "PENDING",
     };
     setItems(prev => [...prev, newItem]);
-    setFormName(""); setFormAmount(""); setFormRemark("");
+    setFormDescription(""); setFormUnitPrice(""); setFormQuantity("1"); setFormRemark("");
     setDialogOpen(false);
   };
 
   const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
 
   const handleApproveItem = (id: string) => {
-    setConsolidatedItems(prev => prev.map(i => i.id === id ? { ...i, status: "approved" as const } : i));
+    setConsolidatedItems(prev => prev.map(i => i.id === id ? { ...i, status: "APPROVED" as const } : i));
     toast({ title: "Item Approved" });
   };
 
   const handleRevisionItem = (id: string) => {
-    setConsolidatedItems(prev => prev.map(i => i.id === id ? { ...i, status: "revision_requested" as const } : i));
+    setConsolidatedItems(prev => prev.map(i => i.id === id ? { ...i, status: "REVISION_REQUIRED" as const } : i));
     toast({ title: "Revision Requested", description: "Item returned to submitting department" });
   };
 
@@ -119,7 +127,6 @@ export default function ITBudgetPage() {
         </Card>
       </div>
 
-      {/* View mode toggle for chiefs */}
       {isChief && (
         <div className="flex gap-2">
           <Button variant={viewMode === "consolidated" ? "default" : "outline"} size="sm" onClick={() => setViewMode("consolidated")}>
@@ -133,14 +140,14 @@ export default function ITBudgetPage() {
 
       <Tabs value={activeCategory} onValueChange={v => setActiveCategory(v as ITBudgetCategory)}>
         <TabsList>
-          {IT_CATEGORIES.map(c => <TabsTrigger key={c} value={c}>{c}</TabsTrigger>)}
+          {IT_BUDGET_CATEGORIES.map(c => <TabsTrigger key={c.value} value={c.value}>{c.label}</TabsTrigger>)}
         </TabsList>
 
         <TabsContent value={activeCategory}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-base">{activeCategory} ({catItems.length})</CardTitle>
+                <CardTitle className="text-base">{IT_BUDGET_CATEGORIES.find(c => c.value === activeCategory)?.label} ({catItems.length})</CardTitle>
                 <p className="text-xs text-muted-foreground">
                   Total: {catItems.reduce((s, i) => s + i.totalWithVat, 0).toLocaleString()} ETB (incl. VAT)
                 </p>
@@ -153,11 +160,11 @@ export default function ITBudgetPage() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>Add {activeCategory} Item</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Add {IT_BUDGET_CATEGORIES.find(c => c.value === activeCategory)?.label} Item</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-2">
                       <div>
-                        <label className="text-sm font-medium text-foreground">Item Name</label>
-                        <Input value={formName} onChange={e => setFormName(e.target.value)} placeholder="e.g. Jira Cloud License" className="mt-1" />
+                        <label className="text-sm font-medium text-foreground">Description</label>
+                        <Input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="e.g. Jira Cloud License" className="mt-1" />
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground">Department</label>
@@ -168,33 +175,37 @@ export default function ITBudgetPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <div>
-                          <label className="text-sm font-medium text-foreground">Amount</label>
-                          <Input type="number" value={formAmount} onChange={e => setFormAmount(e.target.value)} className="mt-1" />
+                          <label className="text-sm font-medium text-foreground">Quantity</label>
+                          <Input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(e.target.value)} className="mt-1" />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Unit Price</label>
+                          <Input type="number" value={formUnitPrice} onChange={e => setFormUnitPrice(e.target.value)} className="mt-1" />
                         </div>
                         <div>
                           <label className="text-sm font-medium text-foreground">Currency</label>
-                          <Select value={formCurrency} onValueChange={setFormCurrency}>
+                          <Select value={formCurrency} onValueChange={v => setFormCurrency(v as Currency)}>
                             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="ETB">ETB</SelectItem>
+                              {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
-                      {formAmount && (
+                      {formUnitPrice && (
                         <div className="bg-muted rounded-md p-3 text-xs space-y-1">
                           {(() => {
-                            const amt = parseFloat(formAmount) || 0;
-                            const birr = formCurrency === "USD" ? amt * USD_TO_BIRR_RATE : amt;
-                            const vat = calcVat(birr);
+                            const qty = parseInt(formQuantity) || 1;
+                            const total = (parseFloat(formUnitPrice) || 0) * qty;
+                            const birr = convertToBirr(total, formCurrency);
+                            const { vat15, totalWithVat } = calcVatFields(birr);
                             return (
                               <>
                                 <p>Birr Fee: {birr.toLocaleString()} ETB</p>
-                                <p>VAT 15%: {vat.toLocaleString()} ETB</p>
-                                <p className="font-bold">Total (incl. VAT): {(birr + vat).toLocaleString()} ETB</p>
+                                <p>VAT 15%: {vat15.toLocaleString()} ETB</p>
+                                <p className="font-bold">Total (incl. VAT): {totalWithVat.toLocaleString()} ETB</p>
                               </>
                             );
                           })()}
@@ -212,18 +223,20 @@ export default function ITBudgetPage() {
             </CardHeader>
             <CardContent>
               {catItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No {activeCategory} items.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">No items.</p>
               ) : (
                 <div className="overflow-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
                         <TableHead>Department</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Unit Price</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Birr Fee</TableHead>
                         <TableHead className="text-right">VAT 15%</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Total (incl. VAT)</TableHead>
                         <TableHead>Remark</TableHead>
                         {viewMode === "consolidated" && <TableHead>Status</TableHead>}
                         <TableHead className="w-20"></TableHead>
@@ -232,28 +245,30 @@ export default function ITBudgetPage() {
                     <TableBody>
                       {catItems.map(item => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="font-medium">{item.description}</TableCell>
                           <TableCell className="text-xs">{item.submittedByDepartment}</TableCell>
-                          <TableCell className="text-right">{item.amount.toLocaleString()} {item.currency}</TableCell>
-                          <TableCell className="text-right">{item.amountBirr.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{item.quantity}</TableCell>
+                          <TableCell className="text-right">{item.unitPrice.toLocaleString()} {item.currency}</TableCell>
+                          <TableCell className="text-right">{item.totalAmount.toLocaleString()} {item.currency}</TableCell>
+                          <TableCell className="text-right">{item.birrFee.toLocaleString()}</TableCell>
                           <TableCell className="text-right">{item.vat15.toLocaleString()}</TableCell>
                           <TableCell className="text-right font-bold">{item.totalWithVat.toLocaleString()}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{item.remark || "—"}</TableCell>
                           {viewMode === "consolidated" && (
                             <TableCell>
                               <Badge variant="secondary" className={
-                                item.status === "approved" ? "bg-success/10 text-success" :
-                                item.status === "revision_requested" ? "bg-accent/10 text-accent" :
+                                item.status === "APPROVED" ? "bg-success/10 text-success" :
+                                item.status === "REVISION_REQUIRED" ? "bg-accent/10 text-accent" :
                                 "bg-warning/10 text-warning"
                               }>
-                                {item.status === "approved" ? "Approved" : item.status === "revision_requested" ? "Revision" : "Pending"}
+                                {item.status === "APPROVED" ? "Approved" : item.status === "REVISION_REQUIRED" ? "Revision" : "Pending"}
                               </Badge>
                             </TableCell>
                           )}
                           <TableCell>
                             {viewMode === "submit" ? (
                               <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                            ) : item.status === "pending" ? (
+                            ) : item.status === "PENDING" ? (
                               <div className="flex gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => handleApproveItem(item.id)} title="Approve">
                                   <Check className="w-4 h-4 text-success" />

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MOCK_LIBRARY_ITEMS } from "@/data/mockData";
-import { BudgetCategory, BudgetItemType, BudgetLineItem, CAPEX_SUB_CATEGORIES } from "@/types/budget";
+import { BudgetCategory, BudgetLineItem, BudgetItemRemark, BUDGET_ITEM_REMARKS, CAPEX_SUB_CATEGORIES, QUARTERS, Quarter, getLibraryItemName, getLibraryItemAmount } from "@/types/budget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,23 +19,27 @@ export default function BudgetCreatePage() {
   const [lineItems, setLineItems] = useState<BudgetLineItem[]>([]);
   const [activeTab, setActiveTab] = useState<BudgetCategory>("CAPEX");
 
-  const activeLibraryItems = MOCK_LIBRARY_ITEMS.filter(i => i.status === "active" && i.category === activeTab);
+  const activeLibraryItems = MOCK_LIBRARY_ITEMS.filter(i => i.status === "ACTIVE" && i.category === activeTab);
   const tabs: BudgetCategory[] = ["CAPEX", "HR", "Direct Expense"];
 
   const addLineItem = (libraryItemId: string) => {
     const lib = MOCK_LIBRARY_ITEMS.find(i => i.id === libraryItemId);
     if (!lib) return;
+    const name = getLibraryItemName(lib);
+    const amount = getLibraryItemAmount(lib);
     const newItem: BudgetLineItem = {
       id: `new-${Date.now()}`,
       libraryItemId: lib.id,
-      libraryItemName: lib.name,
+      libraryItemName: name,
       category: lib.category,
-      capexSubCategory: lib.capexSubCategory,
-      type: "new",
+      capexSubCategory: lib.category === "CAPEX" ? lib.itemCategory : undefined,
+      remark: "NEW",
       quantity: 1,
-      unitCost: lib.defaultAmount,
-      totalCost: lib.defaultAmount,
-      justification: "",
+      unitCost: amount,
+      totalCost: amount,
+      amount: amount,
+      purposeAndNecessity: "",
+      desiredQuarterForProcurement: "QUARTER_1",
     };
     setLineItems(prev => [...prev, newItem]);
   };
@@ -45,6 +49,7 @@ export default function BudgetCreatePage() {
       if (item.id !== id) return item;
       const updated = { ...item, ...updates };
       updated.totalCost = updated.quantity * updated.unitCost;
+      updated.amount = updated.totalCost;
       return updated;
     }));
   };
@@ -55,8 +60,8 @@ export default function BudgetCreatePage() {
 
   const totalAmount = lineItems.reduce((sum, i) => sum + i.totalCost, 0);
 
-  const hasReplacementWithoutAttachment = lineItems.some(
-    i => i.type === "replacement" && !i.attachmentName
+  const hasReplacementWithoutDocument = lineItems.some(
+    i => i.remark === "REPLACEMENT" && !i.documentName
   );
 
   const handleSubmit = () => {
@@ -68,7 +73,7 @@ export default function BudgetCreatePage() {
       toast.error("Please add at least one budget item");
       return;
     }
-    if (hasReplacementWithoutAttachment) {
+    if (hasReplacementWithoutDocument) {
       toast.error("All replacement items require a document upload");
       return;
     }
@@ -139,26 +144,29 @@ export default function BudgetCreatePage() {
         {activeTab === "CAPEX" ? (
           <div className="space-y-5">
             {CAPEX_SUB_CATEGORIES.map(sub => {
-              const subItems = activeLibraryItems.filter(i => i.capexSubCategory === sub);
+              const subItems = activeLibraryItems.filter(i => i.category === "CAPEX" && (i as import("@/types/budget").CapexLibraryItem).itemCategory === sub);
               if (subItems.length === 0) return null;
               return (
                 <div key={sub}>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{sub}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {subItems.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => addLineItem(item.id)}
-                        className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-foreground group-hover:text-accent">{item.name}</p>
-                          <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-                        <p className="text-xs font-medium text-foreground mt-1">ETB {item.defaultAmount.toLocaleString()}</p>
-                      </button>
-                    ))}
+                    {subItems.map(item => {
+                      const capex = item as import("@/types/budget").CapexLibraryItem;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => addLineItem(item.id)}
+                          className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-foreground group-hover:text-accent">{capex.itemName}</p>
+                            <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{capex.unitOfMeasurement}</p>
+                          <p className="text-xs font-medium text-foreground mt-1">ETB {capex.unitPrice.toLocaleString()}</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -166,20 +174,26 @@ export default function BudgetCreatePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {activeLibraryItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => addLineItem(item.id)}
-                className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground group-hover:text-accent">{item.name}</p>
-                  <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-                <p className="text-xs font-medium text-foreground mt-1">ETB {item.defaultAmount.toLocaleString()}</p>
-              </button>
-            ))}
+            {activeLibraryItems.map(item => {
+              const name = getLibraryItemName(item);
+              const amount = getLibraryItemAmount(item);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => addLineItem(item.id)}
+                  className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-foreground group-hover:text-accent">{name}</p>
+                    <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
+                  </div>
+                  {item.category === "HR" && (
+                    <p className="text-xs text-muted-foreground mt-1">{item.jobGrade} · {item.jobCategory}</p>
+                  )}
+                  {amount > 0 && <p className="text-xs font-medium text-foreground mt-1">ETB {amount.toLocaleString()}</p>}
+                </button>
+              );
+            })}
           </div>
         )}
         {activeLibraryItems.length === 0 && (
@@ -208,14 +222,26 @@ export default function BudgetCreatePage() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Type</Label>
-                    <Select value={item.type} onValueChange={v => updateLineItem(item.id, { type: v as BudgetItemType })}>
+                    <Label className="text-xs text-muted-foreground">Remark</Label>
+                    <Select value={item.remark} onValueChange={v => updateLineItem(item.id, { remark: v as BudgetItemRemark })}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="replacement">Replacement</SelectItem>
+                        {BUDGET_ITEM_REMARKS.map(r => (
+                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Desired Quarter</Label>
+                    <Select value={item.desiredQuarterForProcurement} onValueChange={v => updateLineItem(item.id, { desiredQuarterForProcurement: v as Quarter })}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {QUARTERS.map(q => (
+                          <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -247,21 +273,21 @@ export default function BudgetCreatePage() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Justification</Label>
+                  <Label className="text-xs text-muted-foreground">Purpose & Necessity</Label>
                   <Textarea
-                    value={item.justification}
-                    onChange={e => updateLineItem(item.id, { justification: e.target.value })}
-                    placeholder="Explain why this item is needed..."
+                    value={item.purposeAndNecessity}
+                    onChange={e => updateLineItem(item.id, { purposeAndNecessity: e.target.value })}
+                    placeholder="Explain the purpose and necessity for this item..."
                     className="min-h-[60px] text-xs"
                   />
                 </div>
-                {item.type === "replacement" && (
+                {item.remark === "REPLACEMENT" && (
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">
                       Supporting Document <span className="text-accent">*</span>
                     </Label>
-                    {item.attachmentName ? (
-                      <p className="text-xs text-success">{item.attachmentName}</p>
+                    {item.documentName ? (
+                      <p className="text-xs text-success">{item.documentName}</p>
                     ) : (
                       <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-accent/50 rounded-lg cursor-pointer hover:bg-accent/5 transition-colors">
                         <Upload className="w-4 h-4 text-accent" />
@@ -271,7 +297,7 @@ export default function BudgetCreatePage() {
                           className="hidden"
                           onChange={e => {
                             const file = e.target.files?.[0];
-                            if (file) updateLineItem(item.id, { attachmentName: file.name, attachmentUrl: URL.createObjectURL(file) });
+                            if (file) updateLineItem(item.id, { documentName: file.name, documentId: crypto.randomUUID() });
                           }}
                         />
                       </label>
@@ -291,7 +317,7 @@ export default function BudgetCreatePage() {
             {lineItems.length} item{lineItems.length !== 1 ? "s" : ""} ·{" "}
             <span className="font-display font-bold text-foreground">ETB {totalAmount.toLocaleString()}</span>
           </p>
-          {hasReplacementWithoutAttachment && (
+          {hasReplacementWithoutDocument && (
             <p className="text-xs text-accent mt-1">⚠ Some replacement items are missing required documents</p>
           )}
         </div>
@@ -300,7 +326,7 @@ export default function BudgetCreatePage() {
           <Button
             onClick={handleSubmit}
             className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
-            disabled={hasReplacementWithoutAttachment || lineItems.length === 0}
+            disabled={hasReplacementWithoutDocument || lineItems.length === 0}
           >
             <Send className="w-4 h-4" /> Submit Budget
           </Button>
