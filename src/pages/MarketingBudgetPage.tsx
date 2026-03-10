@@ -4,47 +4,46 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MARKETING_BUDGET_GROUPS, MarketingBudgetGroup, MarketingLineItem, USD_TO_BIRR_RATE } from "@/types/departmental";
-import { useAuth } from "@/contexts/AuthContext";
+import { MARKETING_BUDGET_GROUPS, MarketingBudgetGroup, MarketingLineItem, convertToBirr } from "@/types/departmental";
+import { Currency, CURRENCIES } from "@/types/budget";
 
 export default function MarketingBudgetPage() {
-  const { currentUser } = useAuth();
   const [items, setItems] = useState<MarketingLineItem[]>([]);
   const [activeGroup, setActiveGroup] = useState<MarketingBudgetGroup>(MARKETING_BUDGET_GROUPS[0]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Form state
-  const [formName, setFormName] = useState("");
-  const [formType, setFormType] = useState<"new" | "transferred">("new");
-  const [formAmount, setFormAmount] = useState("");
-  const [formCurrency, setFormCurrency] = useState("ETB");
-  const [formRemark, setFormRemark] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formRemark, setFormRemark] = useState<"NEW" | "TRANSFER">("NEW");
+  const [formQuantity, setFormQuantity] = useState("1");
+  const [formUnitPrice, setFormUnitPrice] = useState("");
+  const [formCurrency, setFormCurrency] = useState<Currency>("ETB");
 
-  const totalBudget = items.reduce((sum, i) => sum + i.amountBirr, 0);
-
+  const totalBudget = items.reduce((sum, i) => sum + i.totalAmountBirr, 0);
   const groupItems = items.filter(i => i.group === activeGroup);
-  const groupTotal = groupItems.reduce((sum, i) => sum + i.amountBirr, 0);
+  const groupTotal = groupItems.reduce((sum, i) => sum + i.totalAmountBirr, 0);
 
   const handleAdd = () => {
-    if (!formName || !formAmount) return;
-    const amount = parseFloat(formAmount);
-    const amountBirr = formCurrency === "USD" ? amount * USD_TO_BIRR_RATE : amount;
+    if (!formDescription || !formUnitPrice) return;
+    const unitPrice = parseFloat(formUnitPrice);
+    const quantity = parseInt(formQuantity) || 1;
+    const totalAmount = unitPrice * quantity;
+    const totalAmountBirr = convertToBirr(totalAmount, formCurrency);
     const newItem: MarketingLineItem = {
       id: crypto.randomUUID(),
       group: activeGroup,
-      name: formName,
-      type: formType,
-      amount,
+      description: formDescription,
+      quantity,
+      unitPrice,
+      totalAmount,
       currency: formCurrency,
-      amountBirr,
-      remark: formRemark || undefined,
+      totalAmountBirr,
+      remark: formRemark,
     };
     setItems(prev => [...prev, newItem]);
-    setFormName(""); setFormAmount(""); setFormRemark(""); setFormType("new");
+    setFormDescription(""); setFormUnitPrice(""); setFormQuantity("1"); setFormRemark("NEW");
     setDialogOpen(false);
   };
 
@@ -52,7 +51,6 @@ export default function MarketingBudgetPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with live total */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Marketing Department Budget</h1>
@@ -73,27 +71,22 @@ export default function MarketingBudgetPage() {
         </Card>
       </div>
 
-      {/* Groups Navigation */}
       <div className="flex gap-2 flex-wrap">
         {MARKETING_BUDGET_GROUPS.map(group => {
           const count = items.filter(i => i.group === group).length;
           return (
-            <button
-              key={group}
-              onClick={() => setActiveGroup(group)}
+            <button key={group} onClick={() => setActiveGroup(group)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 activeGroup === group
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-card text-muted-foreground border-border hover:border-foreground/30"
-              }`}
-            >
+              }`}>
               {group} {count > 0 && <span className="ml-1 opacity-70">({count})</span>}
             </button>
           );
         })}
       </div>
 
-      {/* Active Group Content */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -109,47 +102,48 @@ export default function MarketingBudgetPage() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Item to {activeGroup}</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Add Item to {activeGroup}</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
                 <div>
-                  <label className="text-sm font-medium text-foreground">Item Name</label>
-                  <Input value={formName} onChange={e => setFormName(e.target.value)} placeholder="e.g. Billboard Ad Space" className="mt-1" />
+                  <label className="text-sm font-medium text-foreground">Description</label>
+                  <Input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="e.g. Billboard Ad Space" className="mt-1" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Type</label>
-                    <Select value={formType} onValueChange={v => setFormType(v as "new" | "transferred")}>
+                    <label className="text-sm font-medium text-foreground">Remark</label>
+                    <Select value={formRemark} onValueChange={v => setFormRemark(v as "NEW" | "TRANSFER")}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="transferred">Transferred from Previous FY</SelectItem>
+                        <SelectItem value="NEW">New</SelectItem>
+                        <SelectItem value="TRANSFER">Transfer from Previous FY</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">Currency</label>
-                    <Select value={formCurrency} onValueChange={setFormCurrency}>
+                    <Select value={formCurrency} onValueChange={v => setFormCurrency(v as Currency)}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ETB">ETB (Birr)</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
+                        {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Amount</label>
-                  <Input type="number" value={formAmount} onChange={e => setFormAmount(e.target.value)} placeholder="0.00" className="mt-1" />
-                  {formCurrency === "USD" && formAmount && (
-                    <p className="text-xs text-muted-foreground mt-1">≈ {(parseFloat(formAmount) * USD_TO_BIRR_RATE).toLocaleString()} ETB</p>
-                  )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Quantity</label>
+                    <Input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Unit Price</label>
+                    <Input type="number" value={formUnitPrice} onChange={e => setFormUnitPrice(e.target.value)} placeholder="0.00" className="mt-1" />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Remark (optional)</label>
-                  <Input value={formRemark} onChange={e => setFormRemark(e.target.value)} placeholder="Any notes..." className="mt-1" />
-                </div>
+                {formUnitPrice && formCurrency !== "ETB" && (
+                  <p className="text-xs text-muted-foreground">
+                    ≈ {convertToBirr(parseFloat(formUnitPrice) * (parseInt(formQuantity) || 1), formCurrency).toLocaleString()} ETB total
+                  </p>
+                )}
                 <Button onClick={handleAdd} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">Add Item</Button>
               </div>
             </DialogContent>
@@ -162,26 +156,29 @@ export default function MarketingBudgetPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Amount (ETB)</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead>Remark</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Total (ETB)</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {groupItems.map(item => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell>
-                      <Badge variant={item.type === "new" ? "default" : "secondary"} className={item.type === "new" ? "bg-accent/10 text-accent border-accent/20" : ""}>
-                        {item.type === "new" ? "New" : "Transferred"}
+                      <Badge variant={item.remark === "NEW" ? "default" : "secondary"}
+                        className={item.remark === "NEW" ? "bg-accent/10 text-accent border-accent/20" : ""}>
+                        {item.remark === "NEW" ? "New" : "Transfer"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{item.amount.toLocaleString()} {item.currency}</TableCell>
-                    <TableCell className="text-right font-medium">{item.amountBirr.toLocaleString()} ETB</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{item.remark || "—"}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">{item.unitPrice.toLocaleString()} {item.currency}</TableCell>
+                    <TableCell className="text-right">{item.totalAmount.toLocaleString()} {item.currency}</TableCell>
+                    <TableCell className="text-right font-medium">{item.totalAmountBirr.toLocaleString()} ETB</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
@@ -195,12 +192,9 @@ export default function MarketingBudgetPage() {
         </CardContent>
       </Card>
 
-      {/* Summary by group */}
       {items.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Budget Summary by Group</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Budget Summary by Group</CardTitle></CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -213,7 +207,7 @@ export default function MarketingBudgetPage() {
               <TableBody>
                 {MARKETING_BUDGET_GROUPS.filter(g => items.some(i => i.group === g)).map(group => {
                   const gItems = items.filter(i => i.group === group);
-                  const gTotal = gItems.reduce((s, i) => s + i.amountBirr, 0);
+                  const gTotal = gItems.reduce((s, i) => s + i.totalAmountBirr, 0);
                   return (
                     <TableRow key={group}>
                       <TableCell className="font-medium">{group}</TableCell>

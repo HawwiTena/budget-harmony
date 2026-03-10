@@ -1,4 +1,4 @@
-import { LibraryItem, BudgetRequest, User, UserRole } from "@/types/budget";
+import { LibraryItem, BudgetRequest, User, UserRole, CapexLibraryItem, HRLibraryItem, DirectExpenseLibraryItem } from "@/types/budget";
 
 export const MOCK_USERS: User[] = [
   { id: "u1", name: "Abebe Kebede", role: "branch_manager", branch: "Bole Branch", district: "Addis Ababa District" },
@@ -14,18 +14,30 @@ export const MOCK_USERS: User[] = [
   { id: "u11", name: "Board Members", role: "board" },
 ];
 
+const capexItems: CapexLibraryItem[] = [
+  { id: "lib1", category: "CAPEX", itemName: "Desktop Computer", itemCategory: "Computer & Related", unitOfMeasurement: "Unit", unitPrice: 45000, status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
+  { id: "lib2", category: "CAPEX", itemName: "Office Furniture Set", itemCategory: "Furniture & Fittings", unitOfMeasurement: "Set", unitPrice: 30000, status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
+  { id: "lib3", category: "CAPEX", itemName: "Server Equipment", itemCategory: "Computer & Related", unitOfMeasurement: "Unit", unitPrice: 250000, status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-10-15", updatedAt: "2025-10-15" },
+  { id: "lib4", category: "CAPEX", itemName: "Vehicle", itemCategory: "Motor Vehicles & Related", unitOfMeasurement: "Unit", unitPrice: 1500000, status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-10-15", updatedAt: "2025-10-15" },
+  { id: "lib11", category: "CAPEX", itemName: "Security System", itemCategory: "Equipment", unitOfMeasurement: "Unit", unitPrice: 120000, status: "PENDING_CREATE", createdBy: "u5", createdAt: "2025-12-01", updatedAt: "2025-12-01" },
+];
+
+const hrItems: HRLibraryItem[] = [
+  { id: "lib5", category: "HR", jobTitle: "Loan Officer", jobGrade: "Grade_V", jobCategory: "OPERATIONAL", baseSalary: 15000, cashIndemnity: 2000, hardshipAllowance: 0, laundryAllowance: 500, transportationAllowance: 1500, vehicleAllowance: 0, positionAllowance: 0, mobileAllowance: 800, status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
+  { id: "lib6", category: "HR", jobTitle: "Customer Service Rep", jobGrade: "Grade_III", jobCategory: "CLERICAL", baseSalary: 12000, cashIndemnity: 1500, hardshipAllowance: 0, laundryAllowance: 400, transportationAllowance: 1200, vehicleAllowance: 0, positionAllowance: 0, mobileAllowance: 500, status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
+  { id: "lib7", category: "HR", jobTitle: "Branch Manager Assistant", jobGrade: "Grade_VI", jobCategory: "MANAGERIAL", baseSalary: 18000, cashIndemnity: 2500, hardshipAllowance: 0, laundryAllowance: 600, transportationAllowance: 2000, vehicleAllowance: 0, positionAllowance: 1000, mobileAllowance: 1000, status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
+];
+
+const directExpenseItems: DirectExpenseLibraryItem[] = [
+  { id: "lib8", category: "Direct Expense", expenseCategory: "Rent", description: "Office Rent", status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-09-01", updatedAt: "2025-09-01" },
+  { id: "lib9", category: "Direct Expense", expenseCategory: "Utilities", description: "Electricity, water, internet", status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-09-01", updatedAt: "2025-09-01" },
+  { id: "lib10", category: "Direct Expense", expenseCategory: "Supplies", description: "Office Supplies", status: "ACTIVE", createdBy: "u5", approvedBy: "u6", createdAt: "2025-09-01", updatedAt: "2025-09-01" },
+];
+
 export const MOCK_LIBRARY_ITEMS: LibraryItem[] = [
-  { id: "lib1", name: "Desktop Computer", category: "CAPEX", capexSubCategory: "Computer & Related", description: "Standard desktop workstation", defaultAmount: 45000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
-  { id: "lib2", name: "Office Furniture Set", category: "CAPEX", capexSubCategory: "Furniture & Fittings", description: "Desk, chair, and cabinet", defaultAmount: 30000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
-  { id: "lib3", name: "Server Equipment", category: "CAPEX", capexSubCategory: "Computer & Related", description: "Rack-mounted server unit", defaultAmount: 250000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-10-15", updatedAt: "2025-10-15" },
-  { id: "lib4", name: "Vehicle", category: "CAPEX", capexSubCategory: "Vehicles & Related", description: "Company vehicle for branch operations", defaultAmount: 1500000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-10-15", updatedAt: "2025-10-15" },
-  { id: "lib5", name: "Loan Officer", category: "HR", description: "Loan officer position", defaultAmount: 15000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
-  { id: "lib6", name: "Customer Service Rep", category: "HR", description: "Front-desk customer service", defaultAmount: 12000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
-  { id: "lib7", name: "Branch Manager Assistant", category: "HR", description: "Assistant to branch manager", defaultAmount: 18000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-11-01", updatedAt: "2025-11-01" },
-  { id: "lib8", name: "Office Rent", category: "Direct Expense", description: "Monthly office space rental", defaultAmount: 50000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-09-01", updatedAt: "2025-09-01" },
-  { id: "lib9", name: "Utilities", category: "Direct Expense", description: "Electricity, water, internet", defaultAmount: 8000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-09-01", updatedAt: "2025-09-01" },
-  { id: "lib10", name: "Office Supplies", category: "Direct Expense", description: "Stationery and consumables", defaultAmount: 5000, status: "active", createdBy: "u5", approvedBy: "u6", createdAt: "2025-09-01", updatedAt: "2025-09-01" },
-  { id: "lib11", name: "Security System", category: "CAPEX", capexSubCategory: "Equipment & Machinery", description: "CCTV and access control", defaultAmount: 120000, status: "pending_approval", createdBy: "u5", createdAt: "2025-12-01", updatedAt: "2025-12-01" },
+  ...capexItems,
+  ...hrItems,
+  ...directExpenseItems,
 ];
 
 export const MOCK_BUDGET_REQUESTS: BudgetRequest[] = [
@@ -38,10 +50,11 @@ export const MOCK_BUDGET_REQUESTS: BudgetRequest[] = [
     branch: "Bole Branch",
     district: "Addis Ababa District",
     status: "district_review",
+    currentStep: 2,
     lineItems: [
-      { id: "li1", libraryItemId: "lib1", libraryItemName: "Desktop Computer", category: "CAPEX", capexSubCategory: "Computer & Related", type: "replacement", quantity: 5, unitCost: 45000, totalCost: 225000, justification: "Existing units are 5+ years old", attachmentName: "asset_condition_report.pdf" },
-      { id: "li2", libraryItemId: "lib5", libraryItemName: "Loan Officer", category: "HR", type: "new", quantity: 2, unitCost: 15000, totalCost: 30000, justification: "Increasing loan portfolio requires additional staff" },
-      { id: "li3", libraryItemId: "lib8", libraryItemName: "Office Rent", category: "Direct Expense", type: "new", quantity: 12, unitCost: 50000, totalCost: 600000, justification: "Annual office rent" },
+      { id: "li1", libraryItemId: "lib1", libraryItemName: "Desktop Computer", category: "CAPEX", capexSubCategory: "Computer & Related", remark: "REPLACEMENT", quantity: 5, unitCost: 45000, totalCost: 225000, amount: 225000, purposeAndNecessity: "Existing units are 5+ years old", desiredQuarterForProcurement: "QUARTER_1", documentId: "doc1", documentName: "asset_condition_report.pdf" },
+      { id: "li2", libraryItemId: "lib5", libraryItemName: "Loan Officer", category: "HR", remark: "NEW", quantity: 2, unitCost: 15000, totalCost: 30000, amount: 30000, purposeAndNecessity: "Increasing loan portfolio requires additional staff", desiredQuarterForProcurement: "QUARTER_2" },
+      { id: "li3", libraryItemId: "lib8", libraryItemName: "Office Rent", category: "Direct Expense", remark: "NEW", quantity: 12, unitCost: 50000, totalCost: 600000, amount: 600000, purposeAndNecessity: "Annual office rent", desiredQuarterForProcurement: "QUARTER_1" },
     ],
     totalAmount: 855000,
     approvalChain: [
@@ -60,10 +73,11 @@ export const MOCK_BUDGET_REQUESTS: BudgetRequest[] = [
     branch: "Merkato Branch",
     district: "Addis Ababa District",
     status: "strategy_review",
+    currentStep: 5,
     lineItems: [
-      { id: "li4", libraryItemId: "lib2", libraryItemName: "Office Furniture Set", category: "CAPEX", capexSubCategory: "Furniture & Fittings", type: "new", quantity: 10, unitCost: 30000, totalCost: 300000, justification: "New branch expansion" },
-      { id: "li5", libraryItemId: "lib6", libraryItemName: "Customer Service Rep", category: "HR", type: "new", quantity: 3, unitCost: 12000, totalCost: 36000, justification: "High customer traffic requires more staff" },
-      { id: "li6", libraryItemId: "lib9", libraryItemName: "Utilities", category: "Direct Expense", type: "new", quantity: 12, unitCost: 8000, totalCost: 96000, justification: "Annual utilities" },
+      { id: "li4", libraryItemId: "lib2", libraryItemName: "Office Furniture Set", category: "CAPEX", capexSubCategory: "Furniture & Fittings", remark: "NEW", quantity: 10, unitCost: 30000, totalCost: 300000, amount: 300000, purposeAndNecessity: "New branch expansion", desiredQuarterForProcurement: "QUARTER_1" },
+      { id: "li5", libraryItemId: "lib6", libraryItemName: "Customer Service Rep", category: "HR", remark: "NEW", quantity: 3, unitCost: 12000, totalCost: 36000, amount: 36000, purposeAndNecessity: "High customer traffic requires more staff", desiredQuarterForProcurement: "QUARTER_2" },
+      { id: "li6", libraryItemId: "lib9", libraryItemName: "Utilities", category: "Direct Expense", remark: "NEW", quantity: 12, unitCost: 8000, totalCost: 96000, amount: 96000, purposeAndNecessity: "Annual utilities", desiredQuarterForProcurement: "QUARTER_1" },
     ],
     totalAmount: 432000,
     approvalChain: [
@@ -84,8 +98,9 @@ export const MOCK_BUDGET_REQUESTS: BudgetRequest[] = [
     submittedByRole: "department_director",
     department: "IT Department",
     status: "chief_review",
+    currentStep: 2,
     lineItems: [
-      { id: "li7", libraryItemId: "lib3", libraryItemName: "Server Equipment", category: "CAPEX", capexSubCategory: "Computer & Related", type: "replacement", quantity: 3, unitCost: 250000, totalCost: 750000, justification: "End-of-life servers need replacement", attachmentName: "server_eol_report.pdf" },
+      { id: "li7", libraryItemId: "lib3", libraryItemName: "Server Equipment", category: "CAPEX", capexSubCategory: "Computer & Related", remark: "REPLACEMENT", quantity: 3, unitCost: 250000, totalCost: 750000, amount: 750000, purposeAndNecessity: "End-of-life servers need replacement", desiredQuarterForProcurement: "QUARTER_1", documentId: "doc2", documentName: "server_eol_report.pdf" },
     ],
     totalAmount: 750000,
     approvalChain: [
@@ -104,8 +119,9 @@ export const MOCK_BUDGET_REQUESTS: BudgetRequest[] = [
     branch: "Hawassa Branch",
     district: "Southern District",
     status: "revision_requested",
+    currentStep: 2,
     lineItems: [
-      { id: "li8", libraryItemId: "lib4", libraryItemName: "Vehicle", category: "CAPEX", capexSubCategory: "Vehicles & Related", type: "new", quantity: 1, unitCost: 1500000, totalCost: 1500000, justification: "Required for field operations" },
+      { id: "li8", libraryItemId: "lib4", libraryItemName: "Vehicle", category: "CAPEX", capexSubCategory: "Motor Vehicles & Related", remark: "NEW", quantity: 1, unitCost: 1500000, totalCost: 1500000, amount: 1500000, purposeAndNecessity: "Required for field operations", desiredQuarterForProcurement: "QUARTER_3" },
     ],
     totalAmount: 1500000,
     approvalChain: [

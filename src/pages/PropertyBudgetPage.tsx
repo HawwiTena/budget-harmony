@@ -6,35 +6,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Car } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { VehicleLineItem, DEPARTMENTS_LIST, DepartmentName, USD_TO_BIRR_RATE } from "@/types/departmental";
+import { VehicleLineItem, DEPARTMENTS_LIST, DepartmentName, convertToBirr } from "@/types/departmental";
+import { Currency, CURRENCIES } from "@/types/budget";
 
 export default function PropertyBudgetPage() {
   const [items, setItems] = useState<VehicleLineItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [formModel, setFormModel] = useState("");
+  const [formDescription, setFormDescription] = useState("");
   const [formQty, setFormQty] = useState("1");
-  const [formCurrency, setFormCurrency] = useState("ETB");
-  const [formPrice, setFormPrice] = useState("");
+  const [formCurrency, setFormCurrency] = useState<Currency>("ETB");
+  const [formUnitPrice, setFormUnitPrice] = useState("");
   const [formDept, setFormDept] = useState<DepartmentName>("IT");
 
-  const totalBudget = items.reduce((sum, i) => sum + i.priceBirr * i.quantity, 0);
+  const totalBudget = items.reduce((sum, i) => sum + i.totalAmountBirr, 0);
 
   const handleAdd = () => {
-    if (!formModel || !formPrice) return;
-    const price = parseFloat(formPrice);
-    const priceBirr = formCurrency === "USD" ? price * USD_TO_BIRR_RATE : price;
+    if (!formModel || !formUnitPrice) return;
+    const unitPrice = parseFloat(formUnitPrice);
+    const quantity = parseInt(formQty) || 1;
+    const totalAmount = unitPrice * quantity;
+    const totalAmountBirr = convertToBirr(totalAmount, formCurrency);
     const newItem: VehicleLineItem = {
       id: crypto.randomUUID(),
+      description: formDescription || formModel,
       carModel: formModel,
-      quantity: parseInt(formQty) || 1,
+      quantity,
+      unitPrice,
+      totalAmount,
       currency: formCurrency,
-      price,
-      priceBirr,
+      totalAmountBirr,
       requestingDepartment: formDept,
     };
     setItems(prev => [...prev, newItem]);
-    setFormModel(""); setFormPrice(""); setFormQty("1");
+    setFormModel(""); setFormDescription(""); setFormUnitPrice(""); setFormQty("1");
     setDialogOpen(false);
   };
 
@@ -54,9 +60,7 @@ export default function PropertyBudgetPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total Vehicle Budget</p>
-              <p className="text-xl font-bold text-foreground">
-                {totalBudget.toLocaleString()} <span className="text-xs text-muted-foreground">ETB</span>
-              </p>
+              <p className="text-xl font-bold text-foreground">{totalBudget.toLocaleString()} <span className="text-xs text-muted-foreground">ETB</span></p>
             </div>
           </CardContent>
         </Card>
@@ -79,6 +83,10 @@ export default function PropertyBudgetPage() {
                   <Input value={formModel} onChange={e => setFormModel(e.target.value)} placeholder="e.g. Toyota Hilux" className="mt-1" />
                 </div>
                 <div>
+                  <label className="text-sm font-medium text-foreground">Description</label>
+                  <Input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="Additional details..." className="mt-1" />
+                </div>
+                <div>
                   <label className="text-sm font-medium text-foreground">Requesting Department</label>
                   <Select value={formDept} onValueChange={v => setFormDept(v as DepartmentName)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
@@ -94,21 +102,22 @@ export default function PropertyBudgetPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">Currency</label>
-                    <Select value={formCurrency} onValueChange={setFormCurrency}>
+                    <Select value={formCurrency} onValueChange={v => setFormCurrency(v as Currency)}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ETB">ETB</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
+                        {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground">Unit Price</label>
-                    <Input type="number" value={formPrice} onChange={e => setFormPrice(e.target.value)} placeholder="0.00" className="mt-1" />
+                    <Input type="number" value={formUnitPrice} onChange={e => setFormUnitPrice(e.target.value)} placeholder="0.00" className="mt-1" />
                   </div>
                 </div>
-                {formCurrency === "USD" && formPrice && (
-                  <p className="text-xs text-muted-foreground">≈ {(parseFloat(formPrice) * USD_TO_BIRR_RATE).toLocaleString()} ETB per unit</p>
+                {formCurrency !== "ETB" && formUnitPrice && (
+                  <p className="text-xs text-muted-foreground">
+                    ≈ {convertToBirr(parseFloat(formUnitPrice), formCurrency).toLocaleString()} ETB per unit
+                  </p>
                 )}
                 <Button onClick={handleAdd} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">Add Vehicle</Button>
               </div>
@@ -136,8 +145,8 @@ export default function PropertyBudgetPage() {
                     <TableCell className="font-medium">{item.carModel}</TableCell>
                     <TableCell>{item.requestingDepartment}</TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{item.price.toLocaleString()} {item.currency}</TableCell>
-                    <TableCell className="text-right font-medium">{(item.priceBirr * item.quantity).toLocaleString()} ETB</TableCell>
+                    <TableCell className="text-right">{item.unitPrice.toLocaleString()} {item.currency}</TableCell>
+                    <TableCell className="text-right font-medium">{item.totalAmountBirr.toLocaleString()} ETB</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                     </TableCell>

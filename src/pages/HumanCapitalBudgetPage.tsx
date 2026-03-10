@@ -8,12 +8,13 @@ import { Plus, Trash2, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { HRTransferItem, DEPARTMENTS_LIST, DepartmentName } from "@/types/departmental";
 import { MOCK_LIBRARY_ITEMS } from "@/data/mockData";
+import { getLibraryItemName, getLibraryItemAmount, HRLibraryItem } from "@/types/budget";
 
 export default function HumanCapitalBudgetPage() {
   const [items, setItems] = useState<HRTransferItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const hrLibrary = MOCK_LIBRARY_ITEMS.filter(i => i.category === "HR" && i.status === "active");
+  const hrLibrary = MOCK_LIBRARY_ITEMS.filter(i => i.category === "HR" && i.status === "ACTIVE") as HRLibraryItem[];
 
   const [formLibItem, setFormLibItem] = useState("");
   const [formDept, setFormDept] = useState<DepartmentName>("IT");
@@ -27,14 +28,15 @@ export default function HumanCapitalBudgetPage() {
     const lib = hrLibrary.find(l => l.id === formLibItem);
     if (!lib) return;
     const qty = parseInt(formQty) || 1;
+    const unitCost = getLibraryItemAmount(lib);
     setItems(prev => [...prev, {
       id: crypto.randomUUID(),
-      positionName: lib.name,
+      positionName: lib.jobTitle,
       libraryItemId: lib.id,
       department: formDept,
       quantity: qty,
-      unitCost: lib.defaultAmount,
-      totalCost: lib.defaultAmount * qty,
+      unitCost,
+      totalCost: unitCost * qty,
       remark: formRemark || undefined,
     }]);
     setFormLibItem(""); setFormQty("1"); setFormRemark("");
@@ -86,7 +88,9 @@ export default function HumanCapitalBudgetPage() {
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Select position" /></SelectTrigger>
                     <SelectContent>
                       {hrLibrary.map(lib => (
-                        <SelectItem key={lib.id} value={lib.id}>{lib.name} — {lib.defaultAmount.toLocaleString()} ETB</SelectItem>
+                        <SelectItem key={lib.id} value={lib.id}>
+                          {lib.jobTitle} — {lib.jobGrade} — {getLibraryItemAmount(lib).toLocaleString()} ETB
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

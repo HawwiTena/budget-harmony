@@ -7,22 +7,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ProcurementLineItem, ProcurementCategory, DEPARTMENTS_LIST, DepartmentName, USD_TO_BIRR_RATE } from "@/types/departmental";
+import { ProcurementLineItem, ProcurementCategory, DEPARTMENTS_LIST, DepartmentName, convertToBirr, USD_TO_BIRR_RATE } from "@/types/departmental";
 import { MOCK_LIBRARY_ITEMS } from "@/data/mockData";
+import { Currency, CURRENCIES, CapexLibraryItem } from "@/types/budget";
 
 export default function ProcurementBudgetPage() {
   const [items, setItems] = useState<ProcurementLineItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ProcurementCategory>("IT");
 
-  const capexLibrary = MOCK_LIBRARY_ITEMS.filter(i => i.category === "CAPEX" && i.status === "active");
+  const capexLibrary = MOCK_LIBRARY_ITEMS.filter(i => i.category === "CAPEX" && i.status === "ACTIVE") as CapexLibraryItem[];
 
   const [formItem, setFormItem] = useState("");
   const [formDept, setFormDept] = useState<DepartmentName>("IT");
   const [formQty, setFormQty] = useState("1");
   const [formContract, setFormContract] = useState("");
   const [formPayment, setFormPayment] = useState("");
-  const [formCurrency, setFormCurrency] = useState<"USD" | "ETB">("USD");
+  const [formCurrency, setFormCurrency] = useState<Currency>("USD");
 
   const totalBudget = items.reduce((sum, i) => sum + i.totalRemainingBirr, 0);
 
@@ -36,17 +37,22 @@ export default function ProcurementBudgetPage() {
     if (formCurrency === "USD") {
       remainingUSD = remaining;
       remainingBirr = remaining * USD_TO_BIRR_RATE;
+    } else if (formCurrency === "EURO") {
+      remainingUSD = remaining * 140 / USD_TO_BIRR_RATE;
+      remainingBirr = convertToBirr(remaining, "EURO");
     } else {
       remainingBirr = remaining;
       remainingUSD = remaining / USD_TO_BIRR_RATE;
     }
 
+    const lib = capexLibrary.find(l => l.itemName === formItem);
     const newItem: ProcurementLineItem = {
       id: crypto.randomUUID(),
       category: activeTab,
       capexItemName: formItem,
       department: formDept,
       quantity: parseInt(formQty) || 1,
+      unitPrice: lib?.unitPrice || 0,
       contractOrderAmount: contract,
       paymentIssued: payment,
       totalRemainingUSD: Math.round(remainingUSD * 100) / 100,
@@ -111,7 +117,7 @@ export default function ProcurementBudgetPage() {
                         <SelectTrigger className="mt-1"><SelectValue placeholder="Select item" /></SelectTrigger>
                         <SelectContent>
                           {capexLibrary.map(lib => (
-                            <SelectItem key={lib.id} value={lib.name}>{lib.name} — {lib.capexSubCategory}</SelectItem>
+                            <SelectItem key={lib.id} value={lib.itemName}>{lib.itemName} — {lib.itemCategory}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -132,11 +138,10 @@ export default function ProcurementBudgetPage() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground">Currency</label>
-                        <Select value={formCurrency} onValueChange={v => setFormCurrency(v as "USD" | "ETB")}>
+                        <Select value={formCurrency} onValueChange={v => setFormCurrency(v as Currency)}>
                           <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="USD">USD</SelectItem>
-                            <SelectItem value="ETB">ETB (Birr)</SelectItem>
+                            {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -154,11 +159,11 @@ export default function ProcurementBudgetPage() {
                     {formContract && (
                       <div className="bg-muted rounded-md p-3 text-xs space-y-1">
                         <p>Remaining: {((parseFloat(formContract) || 0) - (parseFloat(formPayment) || 0)).toLocaleString()} {formCurrency}</p>
-                        {formCurrency === "USD" && (
-                          <p>≈ {(((parseFloat(formContract) || 0) - (parseFloat(formPayment) || 0)) * USD_TO_BIRR_RATE).toLocaleString()} ETB</p>
+                        {formCurrency !== "ETB" && (
+                          <p>≈ {convertToBirr((parseFloat(formContract) || 0) - (parseFloat(formPayment) || 0), formCurrency).toLocaleString()} ETB</p>
                         )}
-                        {formCurrency === "ETB" && (
-                          <p>≈ {(((parseFloat(formContract) || 0) - (parseFloat(formPayment) || 0)) / USD_TO_BIRR_RATE).toLocaleString()} USD</p>
+                        {formCurrency !== "USD" && (
+                          <p>≈ {(((parseFloat(formContract) || 0) - (parseFloat(formPayment) || 0)) / (formCurrency === "ETB" ? USD_TO_BIRR_RATE : 1)).toLocaleString()} USD</p>
                         )}
                       </div>
                     )}
