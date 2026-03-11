@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, DollarSign } from "lucide-react";
+import { Plus, Trash2, DollarSign, Download, Upload } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MARKETING_BUDGET_GROUPS, MarketingBudgetGroup, MarketingLineItem, convertToBirr } from "@/types/departmental";
 import { Currency, CURRENCIES } from "@/types/budget";
+import { exportMarketingData, importFromExcel } from "@/lib/excelUtils";
 
 export default function MarketingBudgetPage() {
   const [items, setItems] = useState<MarketingLineItem[]>([]);
   const [activeGroup, setActiveGroup] = useState<MarketingBudgetGroup>(MARKETING_BUDGET_GROUPS[0]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formDescription, setFormDescription] = useState("");
   const [formRemark, setFormRemark] = useState<"NEW" | "TRANSFER">("NEW");
@@ -49,6 +51,23 @@ export default function MarketingBudgetPage() {
 
   const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
 
+  const handleImport = (file: File) => {
+    importFromExcel<Record<string, unknown>>(file, (data) => {
+      const imported: MarketingLineItem[] = data.map(row => ({
+        id: crypto.randomUUID(),
+        group: (row["Group"] as MarketingBudgetGroup) || activeGroup,
+        description: (row["Description"] as string) || "",
+        quantity: Number(row["Quantity"]) || 1,
+        unitPrice: Number(row["Unit Price"]) || 0,
+        totalAmount: Number(row["Unit Price"]) * (Number(row["Quantity"]) || 1),
+        currency: (row["Currency"] as Currency) || "ETB",
+        totalAmountBirr: Number(row["Total (ETB)"]) || 0,
+        remark: (row["Remark"] as "NEW" | "TRANSFER") || "NEW",
+      }));
+      setItems(prev => [...prev, ...imported]);
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -56,19 +75,31 @@ export default function MarketingBudgetPage() {
           <h1 className="text-2xl font-display font-bold text-foreground">Marketing Department Budget</h1>
           <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • Marketing budget groups and items</p>
         </div>
-        <Card className="border-accent/30 bg-accent/5 min-w-[220px]">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Marketing Budget</p>
-              <p className="text-xl font-bold text-foreground">
-                {totalBudget.toLocaleString("en-ET", { minimumFractionDigits: 2 })} <span className="text-xs text-muted-foreground">ETB</span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportMarketingData(items)} className="gap-1">
+              <Download className="w-3 h-3" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1">
+              <Upload className="w-3 h-3" /> Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden"
+              onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ""; }} />
+          </div>
+          <Card className="border-accent/30 bg-accent/5 min-w-[220px]">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Marketing Budget</p>
+                <p className="text-xl font-bold text-foreground">
+                  {totalBudget.toLocaleString("en-ET", { minimumFractionDigits: 2 })} <span className="text-xs text-muted-foreground">ETB</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">

@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Car } from "lucide-react";
+import { Plus, Trash2, Car, Download, Upload } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { VehicleLineItem, DEPARTMENTS_LIST, DepartmentName, convertToBirr } from "@/types/departmental";
 import { Currency, CURRENCIES } from "@/types/budget";
+import { exportVehicleData, importFromExcel } from "@/lib/excelUtils";
 
 export default function PropertyBudgetPage() {
   const [items, setItems] = useState<VehicleLineItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formModel, setFormModel] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -46,6 +48,28 @@ export default function PropertyBudgetPage() {
 
   const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
 
+  const handleImport = (file: File) => {
+    importFromExcel<Record<string, unknown>>(file, (data) => {
+      const imported: VehicleLineItem[] = data.map(row => {
+        const qty = Number(row["Quantity"]) || 1;
+        const price = Number(row["Unit Price"]) || 0;
+        const curr = (row["Currency"] as Currency) || "ETB";
+        return {
+          id: crypto.randomUUID(),
+          carModel: (row["Car Model"] as string) || "",
+          description: (row["Description"] as string) || "",
+          quantity: qty,
+          unitPrice: price,
+          totalAmount: qty * price,
+          currency: curr,
+          totalAmountBirr: Number(row["Total (ETB)"]) || convertToBirr(qty * price, curr),
+          requestingDepartment: (row["Department"] as DepartmentName) || "IT",
+        };
+      });
+      setItems(prev => [...prev, ...imported]);
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -53,17 +77,29 @@ export default function PropertyBudgetPage() {
           <h1 className="text-2xl font-display font-bold text-foreground">Property & Logistics — Vehicle Budget</h1>
           <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • Vehicle procurement for all departments</p>
         </div>
-        <Card className="border-accent/30 bg-accent/5 min-w-[220px]">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-              <Car className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Vehicle Budget</p>
-              <p className="text-xl font-bold text-foreground">{totalBudget.toLocaleString()} <span className="text-xs text-muted-foreground">ETB</span></p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportVehicleData(items)} className="gap-1">
+              <Download className="w-3 h-3" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1">
+              <Upload className="w-3 h-3" /> Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden"
+              onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ""; }} />
+          </div>
+          <Card className="border-accent/30 bg-accent/5 min-w-[220px]">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                <Car className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Vehicle Budget</p>
+                <p className="text-xl font-bold text-foreground">{totalBudget.toLocaleString()} <span className="text-xs text-muted-foreground">ETB</span></p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Card>

@@ -1,20 +1,22 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Package } from "lucide-react";
+import { Plus, Trash2, Package, Download, Upload } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ProcurementLineItem, ProcurementCategory, DEPARTMENTS_LIST, DepartmentName, convertToBirr, USD_TO_BIRR_RATE } from "@/types/departmental";
 import { MOCK_LIBRARY_ITEMS } from "@/data/mockData";
 import { Currency, CURRENCIES, CapexLibraryItem } from "@/types/budget";
+import { exportProcurementData, importFromExcel } from "@/lib/excelUtils";
 
 export default function ProcurementBudgetPage() {
   const [items, setItems] = useState<ProcurementLineItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ProcurementCategory>("IT");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const capexLibrary = MOCK_LIBRARY_ITEMS.filter(i => i.category === "CAPEX" && i.status === "ACTIVE") as CapexLibraryItem[];
 
@@ -66,6 +68,25 @@ export default function ProcurementBudgetPage() {
 
   const removeItem = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
 
+  const handleImport = (file: File) => {
+    importFromExcel<Record<string, unknown>>(file, (data) => {
+      const imported: ProcurementLineItem[] = data.map(row => ({
+        id: crypto.randomUUID(),
+        category: (row["Category"] as ProcurementCategory) || activeTab,
+        capexItemName: (row["Item"] as string) || "",
+        department: (row["Department"] as DepartmentName) || "IT",
+        quantity: Number(row["Quantity"]) || 1,
+        unitPrice: 0,
+        contractOrderAmount: Number(row["Contract Amount"]) || 0,
+        paymentIssued: Number(row["Payment Issued"]) || 0,
+        totalRemainingUSD: Number(row["Remaining (USD)"]) || 0,
+        totalRemainingBirr: Number(row["Remaining (ETB)"]) || 0,
+        currency: (row["Currency"] as Currency) || "USD",
+      }));
+      setItems(prev => [...prev, ...imported]);
+    });
+  };
+
   const tabItems = items.filter(i => i.category === activeTab);
   const tabTotal = tabItems.reduce((s, i) => s + i.totalRemainingBirr, 0);
 
@@ -76,17 +97,29 @@ export default function ProcurementBudgetPage() {
           <h1 className="text-2xl font-display font-bold text-foreground">Procurement — CAPEX Budget</h1>
           <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • IT and Non-IT CAPEX items</p>
         </div>
-        <Card className="border-accent/30 bg-accent/5 min-w-[220px]">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-              <Package className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Remaining (ETB)</p>
-              <p className="text-xl font-bold text-foreground">{totalBudget.toLocaleString()}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportProcurementData(items)} className="gap-1">
+              <Download className="w-3 h-3" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1">
+              <Upload className="w-3 h-3" /> Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden"
+              onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ""; }} />
+          </div>
+          <Card className="border-accent/30 bg-accent/5 min-w-[220px]">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                <Package className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Remaining (ETB)</p>
+                <p className="text-xl font-bold text-foreground">{totalBudget.toLocaleString()}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={v => setActiveTab(v as ProcurementCategory)}>
