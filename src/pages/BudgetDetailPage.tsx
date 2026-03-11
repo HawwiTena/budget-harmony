@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import StatusBadge from "@/components/StatusBadge";
 import ApprovalTimeline from "@/components/ApprovalTimeline";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Paperclip } from "lucide-react";
+import { ArrowLeft, Paperclip, Edit3 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -43,6 +43,12 @@ export default function BudgetDetailPage() {
     return roleStageMap[currentUser.role] === budget.status;
   })();
 
+  // Check if the current user can edit (submitter + revision_requested)
+  const canEdit = budget.status === "revision_requested" && (
+    (currentUser.role === "branch_manager" && budget.submittedByRole === "branch_manager") ||
+    (currentUser.role === "department_director" && budget.submittedByRole === "department_director")
+  );
+
   const capexItems = budget.lineItems.filter(i => i.category === "CAPEX");
   const hrItems = budget.lineItems.filter(i => i.category === "HR");
   const directItems = budget.lineItems.filter(i => i.category === "Direct Expense");
@@ -67,8 +73,41 @@ export default function BudgetDetailPage() {
             {budget.branch || budget.department} · FY {budget.fiscalYear} · Submitted {budget.createdAt}
           </p>
         </div>
-        <StatusBadge status={budget.status} />
+        <div className="flex items-center gap-3">
+          {canEdit && (
+            <Link to={`/budgets/${id}/edit`}>
+              <Button variant="outline" className="gap-2 border-accent text-accent hover:bg-accent/10">
+                <Edit3 className="w-4 h-4" /> Edit & Resubmit
+              </Button>
+            </Link>
+          )}
+          <StatusBadge status={budget.status} />
+        </div>
       </div>
+
+      {/* Revision banner */}
+      {budget.status === "revision_requested" && (
+        <div className="bg-accent/5 border border-accent/30 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Edit3 className="w-4 h-4 text-accent" />
+            <span className="text-sm font-semibold text-foreground">Revision Requested</span>
+          </div>
+          {budget.approvalChain
+            .filter(s => s.action === "revision_requested" && s.comment)
+            .map((s, idx) => (
+              <p key={idx} className="text-sm text-muted-foreground mt-1">
+                <span className="font-medium text-foreground">{s.approvedBy}:</span> "{s.comment}"
+              </p>
+            ))}
+          {canEdit && (
+            <Link to={`/budgets/${id}/edit`} className="inline-block mt-3">
+              <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
+                <Edit3 className="w-3 h-3" /> Edit Budget
+              </Button>
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">

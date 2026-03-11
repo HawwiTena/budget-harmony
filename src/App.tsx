@@ -9,6 +9,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import BudgetListPage from "@/pages/BudgetListPage";
 import BudgetDetailPage from "@/pages/BudgetDetailPage";
 import BudgetCreatePage from "@/pages/BudgetCreatePage";
+import BudgetEditPage from "@/pages/BudgetEditPage";
 import ApprovalsPage from "@/pages/ApprovalsPage";
 import LibraryPage from "@/pages/LibraryPage";
 import MarketingBudgetPage from "@/pages/MarketingBudgetPage";
@@ -18,6 +19,7 @@ import ITBudgetPage from "@/pages/ITBudgetPage";
 import OmnichannelBudgetPage from "@/pages/OmnichannelBudgetPage";
 import IBDBudgetPage from "@/pages/IBDBudgetPage";
 import HumanCapitalBudgetPage from "@/pages/HumanCapitalBudgetPage";
+import ConsolidatedBudgetPage from "@/pages/ConsolidatedBudgetPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,8 +37,10 @@ const App = () => (
               <Route path="/budgets" element={<BudgetListPage />} />
               <Route path="/budgets/new" element={<BudgetCreatePage />} />
               <Route path="/budgets/:id" element={<BudgetDetailPage />} />
+              <Route path="/budgets/:id/edit" element={<BudgetEditPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="/library" element={<LibraryPage />} />
+              <Route path="/consolidated" element={<ConsolidatedBudgetPage />} />
               <Route path="/dept/marketing" element={<MarketingBudgetPage />} />
               <Route path="/dept/property" element={<PropertyBudgetPage />} />
               <Route path="/dept/procurement" element={<ProcurementBudgetPage />} />
