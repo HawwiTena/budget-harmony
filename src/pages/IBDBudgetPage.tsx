@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Download, Upload } from "lucide-react";
 import { IBD_MONTHS, IBDMonthlyEntry, IBDMonth } from "@/types/departmental";
+import { exportIBDData, importFromExcel } from "@/lib/excelUtils";
 
 const MONTH_NUMBERS: Record<IBDMonth, number> = {
   July: 7, August: 8, September: 9, October: 10, November: 11, December: 12,
@@ -24,6 +25,7 @@ const emptyEntries = (): IBDMonthlyEntry[] =>
 
 export default function IBDBudgetPage() {
   const [entries, setEntries] = useState<IBDMonthlyEntry[]>(emptyEntries());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateEntry = (month: IBDMonth, field: "projectedInflow" | "serviceCharge" | "netFxRevenue" | "assumptions", value: number | string) => {
     setEntries(prev => prev.map(e => e.month === month ? { ...e, [field]: value } : e));
@@ -38,6 +40,22 @@ export default function IBDBudgetPage() {
     return ((value / total) * 100).toFixed(1) + "%";
   };
 
+  const handleImport = (file: File) => {
+    importFromExcel<Record<string, unknown>>(file, (data) => {
+      setEntries(prev => prev.map(entry => {
+        const row = data.find(r => r["Month"] === entry.month);
+        if (!row) return entry;
+        return {
+          ...entry,
+          projectedInflow: Number(row["Projected Inflow"]) || entry.projectedInflow,
+          serviceCharge: Number(row["Service Charge"]) || entry.serviceCharge,
+          netFxRevenue: Number(row["Net FX Revenue"]) || entry.netFxRevenue,
+          assumptions: (row["Assumptions"] as string) || entry.assumptions,
+        };
+      }));
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -45,17 +63,29 @@ export default function IBDBudgetPage() {
           <h1 className="text-2xl font-display font-bold text-foreground">IBD — FX Revenue Budget</h1>
           <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • Monthly Projected Inflow, Service Charge & Net FX Revenue (July–June)</p>
         </div>
-        <Card className="border-accent/30 bg-accent/5 min-w-[260px]">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Projected Inflow</p>
-              <p className="text-xl font-bold text-foreground">{totalInflow.toLocaleString()}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => exportIBDData(entries)} className="gap-1">
+              <Download className="w-3 h-3" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1">
+              <Upload className="w-3 h-3" /> Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden"
+              onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value = ""; }} />
+          </div>
+          <Card className="border-accent/30 bg-accent/5 min-w-[260px]">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Projected Inflow</p>
+                <p className="text-xl font-bold text-foreground">{totalInflow.toLocaleString()}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Totals Summary */}
@@ -107,48 +137,33 @@ export default function IBDBudgetPage() {
                   <TableRow key={entry.month}>
                     <TableCell className="font-medium">{entry.month}</TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        value={entry.projectedInflow || ""}
+                      <Input type="number" value={entry.projectedInflow || ""}
                         onChange={e => updateEntry(entry.month, "projectedInflow", parseFloat(e.target.value) || 0)}
-                        className="w-32 text-right ml-auto"
-                        placeholder="0"
-                      />
+                        className="w-32 text-right ml-auto" placeholder="0" />
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
                       {getPercentage(entry.projectedInflow, totalInflow)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        value={entry.serviceCharge || ""}
+                      <Input type="number" value={entry.serviceCharge || ""}
                         onChange={e => updateEntry(entry.month, "serviceCharge", parseFloat(e.target.value) || 0)}
-                        className="w-32 text-right ml-auto"
-                        placeholder="0"
-                      />
+                        className="w-32 text-right ml-auto" placeholder="0" />
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
                       {getPercentage(entry.serviceCharge, totalCharge)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        value={entry.netFxRevenue || ""}
+                      <Input type="number" value={entry.netFxRevenue || ""}
                         onChange={e => updateEntry(entry.month, "netFxRevenue", parseFloat(e.target.value) || 0)}
-                        className="w-32 text-right ml-auto"
-                        placeholder="0"
-                      />
+                        className="w-32 text-right ml-auto" placeholder="0" />
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
                       {getPercentage(entry.netFxRevenue, totalRevenue)}
                     </TableCell>
                     <TableCell>
-                      <Input
-                        value={entry.assumptions || ""}
+                      <Input value={entry.assumptions || ""}
                         onChange={e => updateEntry(entry.month, "assumptions", e.target.value)}
-                        className="w-36 text-xs"
-                        placeholder="Notes..."
-                      />
+                        className="w-36 text-xs" placeholder="Notes..." />
                     </TableCell>
                   </TableRow>
                 ))}

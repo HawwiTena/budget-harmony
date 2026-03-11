@@ -13,8 +13,8 @@ import {
   CreditCard,
   TrendingUp,
   Users,
-  ChevronDown,
   User,
+  Layers,
 } from "lucide-react";
 import {
   Select,
@@ -49,6 +49,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Budget Requests", href: "/budgets", icon: FileText },
+  { label: "Consolidated View", href: "/consolidated", icon: Layers, roles: ["strategy_director", "department_chief", "budget_hearing_committee", "executive_committee", "board"] },
   { label: "Approvals", href: "/approvals", icon: CheckSquare, roles: ["district_manager", "branch_management_director", "retail_chief", "strategy_director", "department_chief", "budget_hearing_committee", "executive_committee", "board"] },
   { label: "Budget Library", href: "/library", icon: Library, roles: ["strategic_officer", "strategy_director"] },
 ];

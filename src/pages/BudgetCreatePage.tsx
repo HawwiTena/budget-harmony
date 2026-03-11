@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { MOCK_LIBRARY_ITEMS } from "@/data/mockData";
 import { BudgetCategory, BudgetLineItem, BudgetItemRemark, BUDGET_ITEM_REMARKS, CAPEX_SUB_CATEGORIES, QUARTERS, Quarter, getLibraryItemName, getLibraryItemAmount } from "@/types/budget";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Upload, ArrowLeft, Send } from "lucide-react";
+import { Plus, Trash2, Upload, ArrowLeft, Send, Save, RotateCcw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { saveDraft, loadDraft, clearDraft, hasDraft, BudgetDraft } from "@/lib/draftUtils";
 
 export default function BudgetCreatePage() {
   const { currentUser } = useAuth();
@@ -18,6 +19,63 @@ export default function BudgetCreatePage() {
   const [fiscalYear, setFiscalYear] = useState("2026/27");
   const [lineItems, setLineItems] = useState<BudgetLineItem[]>([]);
   const [activeTab, setActiveTab] = useState<BudgetCategory>("CAPEX");
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    if (hasDraft()) {
+      setShowDraftBanner(true);
+    }
+  }, []);
+
+  // Auto-save draft on changes (debounced)
+  const triggerAutoSave = useCallback(() => {
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      if (title || lineItems.length > 0) {
+        saveDraft({ title, fiscalYear, lineItems, activeTab, savedAt: new Date().toISOString() });
+      }
+    }, 2000);
+  }, [title, fiscalYear, lineItems, activeTab]);
+
+  useEffect(() => {
+    triggerAutoSave();
+    return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
+  }, [title, fiscalYear, lineItems, activeTab, triggerAutoSave]);
+
+  // Auto-save on page leave
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (title || lineItems.length > 0) {
+        saveDraft({ title, fiscalYear, lineItems, activeTab, savedAt: new Date().toISOString() });
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [title, fiscalYear, lineItems, activeTab]);
+
+  const handleRestoreDraft = () => {
+    const draft = loadDraft();
+    if (draft) {
+      setTitle(draft.title);
+      setFiscalYear(draft.fiscalYear);
+      setLineItems(draft.lineItems);
+      setActiveTab(draft.activeTab);
+      toast.success(`Draft restored (saved ${new Date(draft.savedAt).toLocaleString()})`);
+    }
+    setShowDraftBanner(false);
+  };
+
+  const handleDismissDraft = () => {
+    clearDraft();
+    setShowDraftBanner(false);
+  };
+
+  const handleSaveDraft = () => {
+    saveDraft({ title, fiscalYear, lineItems, activeTab, savedAt: new Date().toISOString() });
+    toast.success("Draft saved successfully");
+  };
 
   const activeLibraryItems = MOCK_LIBRARY_ITEMS.filter(i => i.status === "ACTIVE" && i.category === activeTab);
   const tabs: BudgetCategory[] = ["CAPEX", "HR", "Direct Expense"];
@@ -77,6 +135,7 @@ export default function BudgetCreatePage() {
       toast.error("All replacement items require a document upload");
       return;
     }
+    clearDraft();
     toast.success("Budget request submitted successfully!");
     navigate("/budgets");
   };
@@ -95,6 +154,24 @@ export default function BudgetCreatePage() {
           Create a budget request for {currentUser.branch || currentUser.department || "your unit"}
         </p>
       </div>
+
+      {/* Draft Banner */}
+      {showDraftBanner && (
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RotateCcw className="w-4 h-4 text-warning" />
+            <p className="text-sm text-foreground">
+              You have an unsaved draft. Would you like to restore it?
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={handleDismissDraft}>Discard</Button>
+            <Button size="sm" onClick={handleRestoreDraft} className="bg-warning text-warning-foreground hover:bg-warning/90">
+              Restore Draft
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Basic Info */}
       <div className="bg-card border border-border rounded-lg p-5 space-y-4">
@@ -322,6 +399,9 @@ export default function BudgetCreatePage() {
           )}
         </div>
         <div className="flex gap-3">
+          <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
+            <Save className="w-4 h-4" /> Save Draft
+          </Button>
           <Button variant="outline" onClick={() => navigate("/budgets")}>Cancel</Button>
           <Button
             onClick={handleSubmit}
