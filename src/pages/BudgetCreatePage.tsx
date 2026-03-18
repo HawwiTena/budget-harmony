@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Upload, ArrowLeft, Send, Save, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Upload, ArrowLeft, Send, Save, RotateCcw, ChevronDown, ChevronRight, Library, Package } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { saveDraft, loadDraft, clearDraft, hasDraft, BudgetDraft } from "@/lib/draftUtils";
+import { saveDraft, loadDraft, clearDraft, hasDraft } from "@/lib/draftUtils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function BudgetCreatePage() {
   const { currentUser } = useAuth();
@@ -22,14 +23,15 @@ export default function BudgetCreatePage() {
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Check for existing draft on mount
+  // Collapsible states
+  const [libraryOpen, setLibraryOpen] = useState(true);
+  const [budgetItemsOpen, setBudgetItemsOpen] = useState(true);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
   useEffect(() => {
-    if (hasDraft()) {
-      setShowDraftBanner(true);
-    }
+    if (hasDraft()) setShowDraftBanner(true);
   }, []);
 
-  // Auto-save draft on changes (debounced)
   const triggerAutoSave = useCallback(() => {
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
     autoSaveRef.current = setTimeout(() => {
@@ -44,7 +46,6 @@ export default function BudgetCreatePage() {
     return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
   }, [title, fiscalYear, lineItems, activeTab, triggerAutoSave]);
 
-  // Auto-save on page leave
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (title || lineItems.length > 0) {
@@ -67,10 +68,7 @@ export default function BudgetCreatePage() {
     setShowDraftBanner(false);
   };
 
-  const handleDismissDraft = () => {
-    clearDraft();
-    setShowDraftBanner(false);
-  };
+  const handleDismissDraft = () => { clearDraft(); setShowDraftBanner(false); };
 
   const handleSaveDraft = () => {
     saveDraft({ title, fiscalYear, lineItems, activeTab, savedAt: new Date().toISOString() });
@@ -85,8 +83,9 @@ export default function BudgetCreatePage() {
     if (!lib) return;
     const name = getLibraryItemName(lib);
     const amount = getLibraryItemAmount(lib);
+    const newId = `new-${Date.now()}`;
     const newItem: BudgetLineItem = {
-      id: `new-${Date.now()}`,
+      id: newId,
       libraryItemId: lib.id,
       libraryItemName: name,
       category: lib.category,
@@ -99,7 +98,9 @@ export default function BudgetCreatePage() {
       purposeAndNecessity: "",
       desiredQuarterForProcurement: "QUARTER_1",
     };
-    setLineItems(prev => [...prev, newItem]);
+    setLineItems(prev => [newItem, ...prev]);
+    setExpandedItems(prev => new Set(prev).add(newId));
+    toast.success(`Added "${name}" to budget`);
   };
 
   const updateLineItem = (id: string, updates: Partial<BudgetLineItem>) => {
@@ -114,27 +115,24 @@ export default function BudgetCreatePage() {
 
   const removeLineItem = (id: string) => {
     setLineItems(prev => prev.filter(i => i.id !== id));
+    setExpandedItems(prev => { const n = new Set(prev); n.delete(id); return n; });
+  };
+
+  const toggleItemExpanded = (id: string) => {
+    setExpandedItems(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   };
 
   const totalAmount = lineItems.reduce((sum, i) => sum + i.totalCost, 0);
-
-  const hasReplacementWithoutDocument = lineItems.some(
-    i => i.remark === "REPLACEMENT" && !i.documentName
-  );
+  const hasReplacementWithoutDocument = lineItems.some(i => i.remark === "REPLACEMENT" && !i.documentName);
 
   const handleSubmit = () => {
-    if (!title.trim()) {
-      toast.error("Please enter a budget title");
-      return;
-    }
-    if (lineItems.length === 0) {
-      toast.error("Please add at least one budget item");
-      return;
-    }
-    if (hasReplacementWithoutDocument) {
-      toast.error("All replacement items require a document upload");
-      return;
-    }
+    if (!title.trim()) { toast.error("Please enter a budget title"); return; }
+    if (lineItems.length === 0) { toast.error("Please add at least one budget item"); return; }
+    if (hasReplacementWithoutDocument) { toast.error("All replacement items require a document upload"); return; }
     clearDraft();
     toast.success("Budget request submitted successfully!");
     navigate("/budgets");
@@ -155,20 +153,15 @@ export default function BudgetCreatePage() {
         </p>
       </div>
 
-      {/* Draft Banner */}
       {showDraftBanner && (
         <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <RotateCcw className="w-4 h-4 text-warning" />
-            <p className="text-sm text-foreground">
-              You have an unsaved draft. Would you like to restore it?
-            </p>
+            <p className="text-sm text-foreground">You have an unsaved draft. Would you like to restore it?</p>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={handleDismissDraft}>Discard</Button>
-            <Button size="sm" onClick={handleRestoreDraft} className="bg-warning text-warning-foreground hover:bg-warning/90">
-              Restore Draft
-            </Button>
+            <Button size="sm" onClick={handleRestoreDraft} className="bg-warning text-warning-foreground hover:bg-warning/90">Restore Draft</Button>
           </div>
         </div>
       )}
@@ -215,176 +208,93 @@ export default function BudgetCreatePage() {
         ))}
       </div>
 
-      {/* Library Items to Add */}
-      <div className="bg-card border border-border rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Add from Library — {activeTab}</h3>
-        {activeTab === "CAPEX" ? (
-          <div className="space-y-5">
-            {CAPEX_SUB_CATEGORIES.map(sub => {
-              const subItems = activeLibraryItems.filter(i => i.category === "CAPEX" && (i as import("@/types/budget").CapexLibraryItem).itemCategory === sub);
-              if (subItems.length === 0) return null;
-              return (
-                <div key={sub}>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{sub}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {subItems.map(item => {
-                      const capex = item as import("@/types/budget").CapexLibraryItem;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => addLineItem(item.id)}
-                          className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-                        >
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-foreground group-hover:text-accent">{capex.itemName}</p>
-                            <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{capex.unitOfMeasurement}</p>
-                          <p className="text-xs font-medium text-foreground mt-1">ETB {capex.unitPrice.toLocaleString()}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {activeLibraryItems.map(item => {
-              const name = getLibraryItemName(item);
-              const amount = getLibraryItemAmount(item);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => addLineItem(item.id)}
-                  className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground group-hover:text-accent">{name}</p>
-                    <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
-                  </div>
-                  {item.category === "HR" && (
-                    <p className="text-xs text-muted-foreground mt-1">{item.jobGrade} · {item.jobCategory}</p>
-                  )}
-                  {amount > 0 && <p className="text-xs font-medium text-foreground mt-1">ETB {amount.toLocaleString()}</p>}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {activeLibraryItems.length === 0 && (
-          <p className="text-sm text-muted-foreground">No active items in this category.</p>
-        )}
-      </div>
-
-      {/* Added Line Items */}
-      {lineItems.length > 0 && (
+      {/* Library Items - Collapsible */}
+      <Collapsible open={libraryOpen} onOpenChange={setLibraryOpen}>
         <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">Budget Items ({lineItems.length})</h3>
-            <p className="text-sm font-display font-bold text-foreground">
-              Total: ETB {totalAmount.toLocaleString()}
-            </p>
-          </div>
-          <div className="divide-y divide-border">
-            {lineItems.map(item => (
-              <div key={item.id} className="p-5 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.libraryItemName}</p>
-                    <span className="text-xs text-muted-foreground">{item.category}{item.capexSubCategory ? ` · ${item.capexSubCategory}` : ""}</span>
-                  </div>
-                  <button onClick={() => removeLineItem(item.id)} className="text-muted-foreground hover:text-destructive">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+          <CollapsibleTrigger className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors">
+            <div className="flex items-center gap-2">
+              <Library className="w-4 h-4 text-accent" />
+              <h3 className="text-sm font-semibold text-foreground">Item Library — {activeTab}</h3>
+              <span className="text-xs text-muted-foreground">({activeLibraryItems.length} items)</span>
+            </div>
+            {libraryOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-5 pb-5 pt-2">
+              {activeTab === "CAPEX" ? (
+                <div className="space-y-5">
+                  {CAPEX_SUB_CATEGORIES.map(sub => {
+                    const subItems = activeLibraryItems.filter(i => i.category === "CAPEX" && (i as import("@/types/budget").CapexLibraryItem).itemCategory === sub);
+                    if (subItems.length === 0) return null;
+                    return (
+                      <CapexSubGroup key={sub} label={sub} items={subItems} onAdd={addLineItem} />
+                    );
+                  })}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Remark</Label>
-                    <Select value={item.remark} onValueChange={v => updateLineItem(item.id, { remark: v as BudgetItemRemark })}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {BUDGET_ITEM_REMARKS.map(r => (
-                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Desired Quarter</Label>
-                    <Select value={item.desiredQuarterForProcurement} onValueChange={v => updateLineItem(item.id, { desiredQuarterForProcurement: v as Quarter })}>
-                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {QUARTERS.map(q => (
-                          <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Quantity</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={e => updateLineItem(item.id, { quantity: parseInt(e.target.value) || 1 })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Unit Cost (ETB)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={item.unitCost}
-                      onChange={e => updateLineItem(item.id, { unitCost: parseFloat(e.target.value) || 0 })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Total</Label>
-                    <div className="h-9 flex items-center text-xs font-medium text-foreground">
-                      ETB {item.totalCost.toLocaleString()}
-                    </div>
-                  </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {activeLibraryItems.map(item => {
+                    const name = getLibraryItemName(item);
+                    const amount = getLibraryItemAmount(item);
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => addLineItem(item.id)}
+                        className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-foreground group-hover:text-accent">{name}</p>
+                          <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
+                        </div>
+                        {item.category === "HR" && (
+                          <p className="text-xs text-muted-foreground mt-1">{item.jobGrade} · {item.jobCategory}</p>
+                        )}
+                        {amount > 0 && <p className="text-xs font-medium text-foreground mt-1">ETB {amount.toLocaleString()}</p>}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Purpose & Necessity</Label>
-                  <Textarea
-                    value={item.purposeAndNecessity}
-                    onChange={e => updateLineItem(item.id, { purposeAndNecessity: e.target.value })}
-                    placeholder="Explain the purpose and necessity for this item..."
-                    className="min-h-[60px] text-xs"
-                  />
-                </div>
-                {item.remark === "REPLACEMENT" && (
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">
-                      Supporting Document <span className="text-accent">*</span>
-                    </Label>
-                    {item.documentName ? (
-                      <p className="text-xs text-success">{item.documentName}</p>
-                    ) : (
-                      <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-accent/50 rounded-lg cursor-pointer hover:bg-accent/5 transition-colors">
-                        <Upload className="w-4 h-4 text-accent" />
-                        <span className="text-xs text-accent">Upload document (required for replacement items)</span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          onChange={e => {
-                            const file = e.target.files?.[0];
-                            if (file) updateLineItem(item.id, { documentName: file.name, documentId: crypto.randomUUID() });
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+              )}
+              {activeLibraryItems.length === 0 && (
+                <p className="text-sm text-muted-foreground">No active items in this category.</p>
+              )}
+            </div>
+          </CollapsibleContent>
         </div>
+      </Collapsible>
+
+      {/* Added Budget Items - Collapsible */}
+      {lineItems.length > 0 && (
+        <Collapsible open={budgetItemsOpen} onOpenChange={setBudgetItemsOpen}>
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <CollapsibleTrigger className="w-full px-5 py-3 border-b border-border bg-muted/30 flex items-center justify-between hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-accent" />
+                <h3 className="text-sm font-semibold text-foreground">Budget Items ({lineItems.length})</h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-display font-bold text-foreground">
+                  Total: ETB {totalAmount.toLocaleString()}
+                </p>
+                {budgetItemsOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="divide-y divide-border">
+                {lineItems.map(item => (
+                  <BudgetItemRow
+                    key={item.id}
+                    item={item}
+                    expanded={expandedItems.has(item.id)}
+                    onToggle={() => toggleItemExpanded(item.id)}
+                    onUpdate={updateLineItem}
+                    onRemove={removeLineItem}
+                  />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
       )}
 
       {/* Submit */}
@@ -412,6 +322,144 @@ export default function BudgetCreatePage() {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- Sub-components ---------- */
+
+function CapexSubGroup({ label, items, onAdd }: { label: string; items: import("@/types/budget").LibraryItem[]; onAdd: (id: string) => void }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex items-center gap-2 w-full group mb-2">
+        {open ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">{label}</p>
+        <span className="text-xs text-muted-foreground">({items.length})</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {items.map(item => {
+            const capex = item as import("@/types/budget").CapexLibraryItem;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onAdd(item.id)}
+                className="text-left border border-border rounded-lg p-3 hover:border-accent/50 hover:bg-accent/5 transition-colors group"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground group-hover:text-accent">{capex.itemName}</p>
+                  <Plus className="w-4 h-4 text-muted-foreground group-hover:text-accent" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{capex.unitOfMeasurement}</p>
+                <p className="text-xs font-medium text-foreground mt-1">ETB {capex.unitPrice.toLocaleString()}</p>
+              </button>
+            );
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function BudgetItemRow({ item, expanded, onToggle, onUpdate, onRemove }: {
+  item: BudgetLineItem;
+  expanded: boolean;
+  onToggle: () => void;
+  onUpdate: (id: string, updates: Partial<BudgetLineItem>) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="group">
+      {/* Summary row - always visible */}
+      <div className="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-muted/20 transition-colors" onClick={onToggle}>
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {expanded ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{item.libraryItemName}</p>
+            <span className="text-xs text-muted-foreground">{item.category}{item.capexSubCategory ? ` · ${item.capexSubCategory}` : ""}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="text-right">
+            <p className="text-sm font-medium text-foreground">ETB {item.totalCost.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">Qty: {item.quantity} × {item.unitCost.toLocaleString()}</p>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); onRemove(item.id); }}
+            className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Detail fields - collapsible */}
+      {expanded && (
+        <div className="px-5 pb-4 pt-1 ml-7 space-y-3 border-l-2 border-accent/20">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Remark</Label>
+              <Select value={item.remark} onValueChange={v => onUpdate(item.id, { remark: v as BudgetItemRemark })}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {BUDGET_ITEM_REMARKS.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Desired Quarter</Label>
+              <Select value={item.desiredQuarterForProcurement} onValueChange={v => onUpdate(item.id, { desiredQuarterForProcurement: v as Quarter })}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {QUARTERS.map(q => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Quantity</Label>
+              <Input type="number" min={1} value={item.quantity} onChange={e => onUpdate(item.id, { quantity: parseInt(e.target.value) || 1 })} className="h-9 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Unit Cost (ETB)</Label>
+              <Input type="number" min={0} value={item.unitCost} onChange={e => onUpdate(item.id, { unitCost: parseFloat(e.target.value) || 0 })} className="h-9 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Total</Label>
+              <div className="h-9 flex items-center text-xs font-medium text-foreground">ETB {item.totalCost.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Purpose & Necessity</Label>
+            <Textarea
+              value={item.purposeAndNecessity}
+              onChange={e => onUpdate(item.id, { purposeAndNecessity: e.target.value })}
+              placeholder="Explain the purpose and necessity for this item..."
+              className="min-h-[60px] text-xs"
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
+          {item.remark === "REPLACEMENT" && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Supporting Document <span className="text-accent">*</span>
+              </Label>
+              {item.documentName ? (
+                <p className="text-xs text-success">{item.documentName}</p>
+              ) : (
+                <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-accent/50 rounded-lg cursor-pointer hover:bg-accent/5 transition-colors">
+                  <Upload className="w-4 h-4 text-accent" />
+                  <span className="text-xs text-accent">Upload document (required for replacement items)</span>
+                  <input type="file" className="hidden" onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) onUpdate(item.id, { documentName: file.name, documentId: crypto.randomUUID() });
+                  }} />
+                </label>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
