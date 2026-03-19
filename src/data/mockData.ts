@@ -7,8 +7,8 @@ export const MOCK_USERS: User[] = [
   { id: "u4", name: "Meron Tadesse", role: "retail_chief" },
   { id: "u5", name: "Yonas Assefa", role: "strategic_officer" },
   { id: "u6", name: "Helen Girma", role: "strategy_director" },
-  { id: "u7", name: "Tesfaye Bekele", role: "department_director", department: "IT Department" },
-  { id: "u8", name: "Lemlem Wolde", role: "department_chief", department: "IT" },
+  { id: "u7", name: "Tesfaye Bekele", role: "department_director", department: "Database Administration" },
+  { id: "u8", name: "Lemlem Wolde", role: "department_chief", department: "Information Technology" },
   { id: "u9", name: "Committee Members", role: "budget_hearing_committee" },
   { id: "u10", name: "Executive Team", role: "executive_committee" },
   { id: "u11", name: "Board Members", role: "board" },
@@ -96,7 +96,7 @@ export const MOCK_BUDGET_REQUESTS: BudgetRequest[] = [
     title: "IT Department FY 2026/27 Budget",
     submittedBy: "u7",
     submittedByRole: "department_director",
-    department: "IT Department",
+    department: "Database Administration",
     status: "chief_review",
     currentStep: 2,
     lineItems: [
@@ -131,6 +131,138 @@ export const MOCK_BUDGET_REQUESTS: BudgetRequest[] = [
     createdAt: "2026-01-05",
     updatedAt: "2026-01-07",
   },
+  // Additional branches for district consolidation demo
+  {
+    id: "br5",
+    fiscalYear: "2026/27",
+    title: "Piassa Branch FY 2026/27 Budget",
+    submittedBy: "u1",
+    submittedByRole: "branch_manager",
+    branch: "Piassa Branch",
+    district: "Addis Ababa District",
+    status: "director_review",
+    currentStep: 3,
+    lineItems: [
+      { id: "li9", libraryItemId: "lib1", libraryItemName: "Desktop Computer", category: "CAPEX", capexSubCategory: "Computer & Related", remark: "NEW", quantity: 8, unitCost: 45000, totalCost: 360000, amount: 360000, purposeAndNecessity: "New staff workstations", desiredQuarterForProcurement: "QUARTER_1" },
+      { id: "li10", libraryItemId: "lib6", libraryItemName: "Customer Service Rep", category: "HR", remark: "NEW", quantity: 4, unitCost: 12000, totalCost: 48000, amount: 48000, purposeAndNecessity: "Additional customer service capacity", desiredQuarterForProcurement: "QUARTER_2" },
+    ],
+    totalAmount: 408000,
+    approvalChain: [
+      { stage: "submitted", label: "Submitted", approvedBy: "Abebe Kebede", approvedAt: "2026-01-12", action: "approved" },
+      { stage: "district_review", label: "District Manager", approvedBy: "Sara Mengistu", approvedAt: "2026-01-14", action: "approved", comment: "District approved" },
+      { stage: "director_review", label: "Branch Mgmt Director" },
+    ],
+    createdAt: "2026-01-12",
+    updatedAt: "2026-01-14",
+  },
+  {
+    id: "br6",
+    fiscalYear: "2026/27",
+    title: "Bahir Dar Branch FY 2026/27 Budget",
+    submittedBy: "u1",
+    submittedByRole: "branch_manager",
+    branch: "Bahir Dar Branch",
+    district: "Northern District",
+    status: "director_review",
+    currentStep: 3,
+    lineItems: [
+      { id: "li11", libraryItemId: "lib2", libraryItemName: "Office Furniture Set", category: "CAPEX", capexSubCategory: "Furniture & Fittings", remark: "NEW", quantity: 6, unitCost: 30000, totalCost: 180000, amount: 180000, purposeAndNecessity: "Branch renovation", desiredQuarterForProcurement: "QUARTER_2" },
+      { id: "li12", libraryItemId: "lib10", libraryItemName: "Office Supplies", category: "Direct Expense", remark: "NEW", quantity: 12, unitCost: 5000, totalCost: 60000, amount: 60000, purposeAndNecessity: "Annual supplies budget", desiredQuarterForProcurement: "QUARTER_1" },
+    ],
+    totalAmount: 240000,
+    approvalChain: [
+      { stage: "submitted", label: "Submitted", approvedBy: "Abebe Kebede", approvedAt: "2026-01-11", action: "approved" },
+      { stage: "district_review", label: "District Manager", approvedBy: "District Mgr North", approvedAt: "2026-01-13", action: "approved" },
+      { stage: "director_review", label: "Branch Mgmt Director" },
+    ],
+    createdAt: "2026-01-11",
+    updatedAt: "2026-01-13",
+  },
+  {
+    id: "br7",
+    fiscalYear: "2026/27",
+    title: "Jimma Branch FY 2026/27 Budget",
+    submittedBy: "u1",
+    submittedByRole: "branch_manager",
+    branch: "Jimma Branch",
+    district: "Western District",
+    status: "chief_review",
+    currentStep: 4,
+    lineItems: [
+      { id: "li13", libraryItemId: "lib1", libraryItemName: "Desktop Computer", category: "CAPEX", capexSubCategory: "Computer & Related", remark: "NEW", quantity: 3, unitCost: 45000, totalCost: 135000, amount: 135000, purposeAndNecessity: "Expanding teller stations", desiredQuarterForProcurement: "QUARTER_1" },
+      { id: "li14", libraryItemId: "lib5", libraryItemName: "Loan Officer", category: "HR", remark: "NEW", quantity: 1, unitCost: 15000, totalCost: 15000, amount: 15000, purposeAndNecessity: "Growth in loan demand", desiredQuarterForProcurement: "QUARTER_3" },
+    ],
+    totalAmount: 150000,
+    approvalChain: [
+      { stage: "submitted", label: "Submitted", approvedBy: "Abebe Kebede", approvedAt: "2026-01-08", action: "approved" },
+      { stage: "district_review", label: "District Manager", approvedBy: "District Mgr West", approvedAt: "2026-01-10", action: "approved" },
+      { stage: "director_review", label: "Branch Mgmt Director", approvedBy: "Dawit Haile", approvedAt: "2026-01-12", action: "approved" },
+      { stage: "chief_review", label: "Retail Chief" },
+    ],
+    createdAt: "2026-01-08",
+    updatedAt: "2026-01-12",
+  },
+  // Additional IT sub-department budgets
+  {
+    id: "br8",
+    fiscalYear: "2026/27",
+    title: "Infrastructure & Operations FY 2026/27 Budget",
+    submittedBy: "u7",
+    submittedByRole: "department_director",
+    department: "Infrastructure & Operations",
+    status: "chief_review",
+    currentStep: 2,
+    lineItems: [
+      { id: "li15", libraryItemId: "lib3", libraryItemName: "Server Equipment", category: "CAPEX", capexSubCategory: "Computer & Related", remark: "NEW", quantity: 5, unitCost: 250000, totalCost: 1250000, amount: 1250000, purposeAndNecessity: "Data center expansion", desiredQuarterForProcurement: "QUARTER_1" },
+      { id: "li16", libraryItemId: "lib9", libraryItemName: "Utilities", category: "Direct Expense", remark: "NEW", quantity: 12, unitCost: 25000, totalCost: 300000, amount: 300000, purposeAndNecessity: "Data center power and cooling", desiredQuarterForProcurement: "QUARTER_1" },
+    ],
+    totalAmount: 1550000,
+    approvalChain: [
+      { stage: "submitted", label: "Submitted", approvedBy: "Infra Director", approvedAt: "2026-01-09", action: "approved" },
+      { stage: "chief_review", label: "Department Chief" },
+    ],
+    createdAt: "2026-01-09",
+    updatedAt: "2026-01-09",
+  },
+  {
+    id: "br9",
+    fiscalYear: "2026/27",
+    title: "Application Development FY 2026/27 Budget",
+    submittedBy: "u7",
+    submittedByRole: "department_director",
+    department: "Application Development",
+    status: "chief_review",
+    currentStep: 2,
+    lineItems: [
+      { id: "li17", libraryItemId: "lib1", libraryItemName: "Desktop Computer", category: "CAPEX", capexSubCategory: "Computer & Related", remark: "NEW", quantity: 10, unitCost: 45000, totalCost: 450000, amount: 450000, purposeAndNecessity: "Developer workstations", desiredQuarterForProcurement: "QUARTER_1" },
+      { id: "li18", libraryItemId: "lib7", libraryItemName: "Branch Manager Assistant", category: "HR", remark: "NEW", quantity: 2, unitCost: 18000, totalCost: 36000, amount: 36000, purposeAndNecessity: "Senior developers needed", desiredQuarterForProcurement: "QUARTER_2" },
+    ],
+    totalAmount: 486000,
+    approvalChain: [
+      { stage: "submitted", label: "Submitted", approvedBy: "App Dev Director", approvedAt: "2026-01-10", action: "approved" },
+      { stage: "chief_review", label: "Department Chief" },
+    ],
+    createdAt: "2026-01-10",
+    updatedAt: "2026-01-10",
+  },
+];
+
+// Districts with their branches for consolidation
+export const DISTRICT_BRANCHES: Record<string, string[]> = {
+  "Addis Ababa District": ["Bole Branch", "Merkato Branch", "Piassa Branch"],
+  "Southern District": ["Hawassa Branch", "Adama Branch"],
+  "Northern District": ["Bahir Dar Branch", "Gondar Branch"],
+  "Western District": ["Jimma Branch", "Nekemte Branch"],
+  "Eastern District": ["Dire Dawa Branch", "Harar Branch"],
+};
+
+// IT child departments that report to the IT chief
+export const IT_CHILD_DEPARTMENTS = [
+  "Database Administration",
+  "Infrastructure & Operations",
+  "Application Development",
+  "Cybersecurity",
+  "Network Administration",
 ];
 
 export function getCurrentUser(role: UserRole): User {

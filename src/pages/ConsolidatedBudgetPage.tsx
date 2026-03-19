@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, BarChart3, Package, Users, Receipt, Megaphone, Car, CreditCard, TrendingUp, Monitor } from "lucide-react";
-import { MOCK_BUDGET_REQUESTS } from "@/data/mockData";
+import { Download, Search, BarChart3, Package, Users, Receipt, Megaphone, Car, CreditCard, TrendingUp, Monitor, Info } from "lucide-react";
+import { MOCK_BUDGET_REQUESTS, IT_CHILD_DEPARTMENTS } from "@/data/mockData";
 import { BudgetLineItem, CAPEX_SUB_CATEGORIES } from "@/types/budget";
+import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from "xlsx";
 
 // Mock departmental data for consolidated view
@@ -26,6 +27,7 @@ const MOCK_DEPT_VEHICLES = [
 const MOCK_DEPT_IT = [
   { id: "dit1", category: "SOFTWARE", description: "Oracle DB License", department: "Database Administration", birrFee: 3250000, vat15: 573529, totalWithVat: 3823529, status: "APPROVED" },
   { id: "dit2", category: "SERVICEFEE", description: "AWS Cloud Services", department: "Infrastructure & Operations", birrFee: 2340000, vat15: 412941, totalWithVat: 2752941, status: "PENDING" },
+  { id: "dit3", category: "SOFTWARE", description: "IDE Licenses", department: "Application Development", birrFee: 450000, vat15: 79412, totalWithVat: 529412, status: "PENDING" },
 ];
 
 const MOCK_DEPT_OMNICHANNEL = [
@@ -46,34 +48,56 @@ const MOCK_DEPT_HR_TRANSFER = [
 type ConsolidatedTab = "all_capex" | "all_hr" | "all_direct" | "marketing" | "vehicles" | "it" | "omnichannel" | "ibd" | "hr_transfer";
 
 export default function ConsolidatedBudgetPage() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<ConsolidatedTab>("all_capex");
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
 
-  // Aggregate CAPEX from all budget requests
+  // Role-based filtering logic
+  const isDeptChief = currentUser.role === "department_chief";
+  const isITChief = isDeptChief && currentUser.department?.toLowerCase().includes("information technology") || currentUser.department?.toLowerCase().includes("technology");
+  const isBranchDirector = currentUser.role === "branch_management_director";
+  const isRetailChief = currentUser.role === "retail_chief";
+  const showAllTabs = !isDeptChief; // IT chiefs only see IT-related tabs
+
+  // Filter budget requests based on role
+  const filteredBudgetRequests = useMemo(() => {
+    if (isITChief) {
+      // IT chief only sees budgets from IT child departments
+      return MOCK_BUDGET_REQUESTS.filter(br =>
+        br.department && IT_CHILD_DEPARTMENTS.some(d =>
+          br.department?.toLowerCase().includes(d.toLowerCase())
+        )
+      );
+    }
+    // Director and retail chief see all (branch + department)
+    return MOCK_BUDGET_REQUESTS;
+  }, [isITChief]);
+
+  // Aggregate from filtered requests
   const allCapex = useMemo(() => {
-    return MOCK_BUDGET_REQUESTS.flatMap(br =>
+    return filteredBudgetRequests.flatMap(br =>
       br.lineItems
         .filter(li => li.category === "CAPEX")
         .map(li => ({ ...li, source: br.branch || br.department || "Unknown", budgetTitle: br.title, status: br.status }))
     );
-  }, []);
+  }, [filteredBudgetRequests]);
 
   const allHR = useMemo(() => {
-    return MOCK_BUDGET_REQUESTS.flatMap(br =>
+    return filteredBudgetRequests.flatMap(br =>
       br.lineItems
         .filter(li => li.category === "HR")
         .map(li => ({ ...li, source: br.branch || br.department || "Unknown", budgetTitle: br.title, status: br.status }))
     );
-  }, []);
+  }, [filteredBudgetRequests]);
 
   const allDirect = useMemo(() => {
-    return MOCK_BUDGET_REQUESTS.flatMap(br =>
+    return filteredBudgetRequests.flatMap(br =>
       br.lineItems
         .filter(li => li.category === "Direct Expense")
         .map(li => ({ ...li, source: br.branch || br.department || "Unknown", budgetTitle: br.title, status: br.status }))
     );
-  }, []);
+  }, [filteredBudgetRequests]);
 
   const totalCapex = allCapex.reduce((s, i) => s + i.totalCost, 0);
   const totalHR = allHR.reduce((s, i) => s + i.totalCost, 0);
@@ -89,6 +113,14 @@ export default function ConsolidatedBudgetPage() {
     return Array.from(sources).sort();
   }, [allCapex, allHR, allDirect]);
 
+  // Filtered IT data for IT chief
+  const filteredITData = useMemo(() => {
+    if (isITChief) {
+      return MOCK_DEPT_IT; // All IT sub-departments are visible to IT chief
+    }
+    return MOCK_DEPT_IT;
+  }, [isITChief]);
+
   const filterBySearch = <T extends { source?: string; department?: string }>(items: T[]) => {
     let filtered = items;
     if (filterDept !== "all") {
@@ -96,6 +128,22 @@ export default function ConsolidatedBudgetPage() {
     }
     return filtered;
   };
+
+  // Available tabs based on role
+  const availableTabs = useMemo(() => {
+    if (isITChief) {
+      // IT chief only sees CAPEX/HR/Direct from IT depts + IT tab
+      return ["all_capex", "all_hr", "all_direct", "it"] as ConsolidatedTab[];
+    }
+    return ["all_capex", "all_hr", "all_direct", "marketing", "vehicles", "it", "omnichannel", "ibd", "hr_transfer"] as ConsolidatedTab[];
+  }, [isITChief]);
+
+  const roleContextLabel = useMemo(() => {
+    if (isITChief) return "IT Child Departments Only";
+    if (isBranchDirector) return "All Branches & Departments";
+    if (isRetailChief) return "All Branches & Departments";
+    return "All Branches & Departments";
+  }, [isITChief, isBranchDirector, isRetailChief]);
 
   const handleExportExcel = () => {
     const wb = XLSX.utils.book_new();
@@ -215,12 +263,31 @@ export default function ConsolidatedBudgetPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Consolidated Budget View</h1>
-          <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • All branches & departments combined</p>
+          <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • {roleContextLabel}</p>
         </div>
         <Button onClick={handleExportExcel} variant="outline" className="gap-2">
           <Download className="w-4 h-4" /> Export All to Excel
         </Button>
       </div>
+
+      {/* Role context banner */}
+      {isITChief && (
+        <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-3">
+          <Info className="w-4 h-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            As <span className="font-medium text-foreground">Information Technology Chief</span>, you are viewing budgets from IT child departments: {IT_CHILD_DEPARTMENTS.join(", ")}
+          </p>
+        </div>
+      )}
+
+      {(isBranchDirector || isRetailChief) && (
+        <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-3">
+          <Info className="w-4 h-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            As <span className="font-medium text-foreground">{isBranchDirector ? "Branch Management Director" : "Retail Chief"}</span>, you can view individual branch budget requests across all districts and all departmental budgets.
+          </p>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -293,17 +360,17 @@ export default function ConsolidatedBudgetPage() {
         </Select>
       </div>
 
-      <Tabs value={activeTab} onValueChange={v => setActiveTab(v as ConsolidatedTab)}>
+      <Tabs value={availableTabs.includes(activeTab) ? activeTab : availableTabs[0]} onValueChange={v => setActiveTab(v as ConsolidatedTab)}>
         <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="all_capex" className="gap-1"><Package className="w-3 h-3" /> All CAPEX</TabsTrigger>
-          <TabsTrigger value="all_hr" className="gap-1"><Users className="w-3 h-3" /> All HR</TabsTrigger>
-          <TabsTrigger value="all_direct" className="gap-1"><Receipt className="w-3 h-3" /> All Direct Exp</TabsTrigger>
-          <TabsTrigger value="marketing" className="gap-1"><Megaphone className="w-3 h-3" /> Marketing</TabsTrigger>
-          <TabsTrigger value="vehicles" className="gap-1"><Car className="w-3 h-3" /> Vehicles</TabsTrigger>
-          <TabsTrigger value="it" className="gap-1"><Monitor className="w-3 h-3" /> IT</TabsTrigger>
-          <TabsTrigger value="omnichannel" className="gap-1"><CreditCard className="w-3 h-3" /> Omnichannel</TabsTrigger>
-          <TabsTrigger value="ibd" className="gap-1"><TrendingUp className="w-3 h-3" /> IBD</TabsTrigger>
-          <TabsTrigger value="hr_transfer" className="gap-1"><Users className="w-3 h-3" /> HR Transfer</TabsTrigger>
+          {availableTabs.includes("all_capex") && <TabsTrigger value="all_capex" className="gap-1"><Package className="w-3 h-3" /> All CAPEX</TabsTrigger>}
+          {availableTabs.includes("all_hr") && <TabsTrigger value="all_hr" className="gap-1"><Users className="w-3 h-3" /> All HR</TabsTrigger>}
+          {availableTabs.includes("all_direct") && <TabsTrigger value="all_direct" className="gap-1"><Receipt className="w-3 h-3" /> All Direct Exp</TabsTrigger>}
+          {availableTabs.includes("marketing") && <TabsTrigger value="marketing" className="gap-1"><Megaphone className="w-3 h-3" /> Marketing</TabsTrigger>}
+          {availableTabs.includes("vehicles") && <TabsTrigger value="vehicles" className="gap-1"><Car className="w-3 h-3" /> Vehicles</TabsTrigger>}
+          {availableTabs.includes("it") && <TabsTrigger value="it" className="gap-1"><Monitor className="w-3 h-3" /> IT</TabsTrigger>}
+          {availableTabs.includes("omnichannel") && <TabsTrigger value="omnichannel" className="gap-1"><CreditCard className="w-3 h-3" /> Omnichannel</TabsTrigger>}
+          {availableTabs.includes("ibd") && <TabsTrigger value="ibd" className="gap-1"><TrendingUp className="w-3 h-3" /> IBD</TabsTrigger>}
+          {availableTabs.includes("hr_transfer") && <TabsTrigger value="hr_transfer" className="gap-1"><Users className="w-3 h-3" /> HR Transfer</TabsTrigger>}
         </TabsList>
 
         {/* All CAPEX */}

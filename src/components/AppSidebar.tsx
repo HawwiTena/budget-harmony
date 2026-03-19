@@ -38,6 +38,9 @@ const ROLES: UserRole[] = [
   "board",
 ];
 
+// Departments whose chiefs can access consolidated view
+const CHIEF_CONSOLIDATED_DEPARTMENTS = ["Information Technology", "Technology"];
+
 interface NavItem {
   label: string;
   href: string;
@@ -49,7 +52,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Budget Requests", href: "/budgets", icon: FileText },
-  { label: "Consolidated View", href: "/consolidated", icon: Layers, roles: ["strategy_director", "department_chief", "budget_hearing_committee", "executive_committee", "board"] },
+  { label: "Consolidated View", href: "/consolidated", icon: Layers, roles: ["branch_management_director", "retail_chief", "strategy_director", "department_chief", "budget_hearing_committee", "executive_committee", "board"] },
   { label: "Approvals", href: "/approvals", icon: CheckSquare, roles: ["district_manager", "branch_management_director", "retail_chief", "strategy_director", "department_chief", "budget_hearing_committee", "executive_committee", "board"] },
   { label: "Budget Library", href: "/library", icon: Library, roles: ["strategic_officer", "strategy_director"] },
 ];
@@ -68,9 +71,18 @@ export default function AppSidebar() {
   const { currentUser, setRole, roleLabel } = useAuth();
   const location = useLocation();
 
-  const visibleItems = NAV_ITEMS.filter(
-    item => !item.roles || item.roles.includes(currentUser.role)
-  );
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if (!item.roles) return true;
+    if (!item.roles.includes(currentUser.role)) return false;
+
+    // Department chiefs only see Consolidated View if they are IT/Technology chief
+    if (item.href === "/consolidated" && currentUser.role === "department_chief") {
+      return CHIEF_CONSOLIDATED_DEPARTMENTS.some(
+        dept => currentUser.department?.toLowerCase().includes(dept.toLowerCase())
+      );
+    }
+    return true;
+  });
 
   return (
     <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
