@@ -263,12 +263,31 @@ export default function ConsolidatedBudgetPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Consolidated Budget View</h1>
-          <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • All branches & departments combined</p>
+          <p className="text-sm text-muted-foreground mt-1">FY 2026/27 • {roleContextLabel}</p>
         </div>
         <Button onClick={handleExportExcel} variant="outline" className="gap-2">
           <Download className="w-4 h-4" /> Export All to Excel
         </Button>
       </div>
+
+      {/* Role context banner */}
+      {isITChief && (
+        <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-3">
+          <Info className="w-4 h-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            As <span className="font-medium text-foreground">Information Technology Chief</span>, you are viewing budgets from IT child departments: {IT_CHILD_DEPARTMENTS.join(", ")}
+          </p>
+        </div>
+      )}
+
+      {(isBranchDirector || isRetailChief) && (
+        <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-3">
+          <Info className="w-4 h-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            As <span className="font-medium text-foreground">{isBranchDirector ? "Branch Management Director" : "Retail Chief"}</span>, you can view individual branch budget requests across all districts and all departmental budgets.
+          </p>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -341,17 +360,17 @@ export default function ConsolidatedBudgetPage() {
         </Select>
       </div>
 
-      <Tabs value={activeTab} onValueChange={v => setActiveTab(v as ConsolidatedTab)}>
+      <Tabs value={availableTabs.includes(activeTab) ? activeTab : availableTabs[0]} onValueChange={v => setActiveTab(v as ConsolidatedTab)}>
         <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="all_capex" className="gap-1"><Package className="w-3 h-3" /> All CAPEX</TabsTrigger>
-          <TabsTrigger value="all_hr" className="gap-1"><Users className="w-3 h-3" /> All HR</TabsTrigger>
-          <TabsTrigger value="all_direct" className="gap-1"><Receipt className="w-3 h-3" /> All Direct Exp</TabsTrigger>
-          <TabsTrigger value="marketing" className="gap-1"><Megaphone className="w-3 h-3" /> Marketing</TabsTrigger>
-          <TabsTrigger value="vehicles" className="gap-1"><Car className="w-3 h-3" /> Vehicles</TabsTrigger>
-          <TabsTrigger value="it" className="gap-1"><Monitor className="w-3 h-3" /> IT</TabsTrigger>
-          <TabsTrigger value="omnichannel" className="gap-1"><CreditCard className="w-3 h-3" /> Omnichannel</TabsTrigger>
-          <TabsTrigger value="ibd" className="gap-1"><TrendingUp className="w-3 h-3" /> IBD</TabsTrigger>
-          <TabsTrigger value="hr_transfer" className="gap-1"><Users className="w-3 h-3" /> HR Transfer</TabsTrigger>
+          {availableTabs.includes("all_capex") && <TabsTrigger value="all_capex" className="gap-1"><Package className="w-3 h-3" /> All CAPEX</TabsTrigger>}
+          {availableTabs.includes("all_hr") && <TabsTrigger value="all_hr" className="gap-1"><Users className="w-3 h-3" /> All HR</TabsTrigger>}
+          {availableTabs.includes("all_direct") && <TabsTrigger value="all_direct" className="gap-1"><Receipt className="w-3 h-3" /> All Direct Exp</TabsTrigger>}
+          {availableTabs.includes("marketing") && <TabsTrigger value="marketing" className="gap-1"><Megaphone className="w-3 h-3" /> Marketing</TabsTrigger>}
+          {availableTabs.includes("vehicles") && <TabsTrigger value="vehicles" className="gap-1"><Car className="w-3 h-3" /> Vehicles</TabsTrigger>}
+          {availableTabs.includes("it") && <TabsTrigger value="it" className="gap-1"><Monitor className="w-3 h-3" /> IT</TabsTrigger>}
+          {availableTabs.includes("omnichannel") && <TabsTrigger value="omnichannel" className="gap-1"><CreditCard className="w-3 h-3" /> Omnichannel</TabsTrigger>}
+          {availableTabs.includes("ibd") && <TabsTrigger value="ibd" className="gap-1"><TrendingUp className="w-3 h-3" /> IBD</TabsTrigger>}
+          {availableTabs.includes("hr_transfer") && <TabsTrigger value="hr_transfer" className="gap-1"><Users className="w-3 h-3" /> HR Transfer</TabsTrigger>}
         </TabsList>
 
         {/* All CAPEX */}
