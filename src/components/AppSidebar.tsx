@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole, ROLE_LABELS } from "@/types/budget";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -13,6 +13,7 @@ import {
   CreditCard,
   TrendingUp,
   Users,
+  LogOut,
   User,
   Layers,
 } from "lucide-react";
@@ -68,8 +69,14 @@ const DEPT_NAV_ITEMS: NavItem[] = [
 ];
 
 export default function AppSidebar() {
-  const { currentUser, setRole, roleLabel } = useAuth();
+  const { currentUser, setRole, roleLabel, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const visibleItems = NAV_ITEMS.filter(item => {
     if (!item.roles) return true;
@@ -169,10 +176,17 @@ export default function AppSidebar() {
           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
             <User className="w-4 h-4 text-muted-foreground" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground truncate">{currentUser.name}</p>
             <p className="text-[11px] text-muted-foreground truncate">{roleLabel}</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-accent hover:bg-muted transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>
