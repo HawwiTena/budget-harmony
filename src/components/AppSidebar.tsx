@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole, ROLE_LABELS } from "@/types/budget";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
