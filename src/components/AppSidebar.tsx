@@ -69,8 +69,14 @@ const DEPT_NAV_ITEMS: NavItem[] = [
 ];
 
 export default function AppSidebar() {
-  const { currentUser, setRole, roleLabel } = useAuth();
+  const { currentUser, setRole, roleLabel, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const visibleItems = NAV_ITEMS.filter(item => {
     if (!item.roles) return true;
