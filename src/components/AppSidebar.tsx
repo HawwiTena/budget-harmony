@@ -13,6 +13,7 @@ import {
   CreditCard,
   TrendingUp,
   Users,
+  LogOut,
   User,
   Layers,
 } from "lucide-react";
