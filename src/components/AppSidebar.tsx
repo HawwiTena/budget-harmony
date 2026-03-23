@@ -176,10 +176,17 @@ export default function AppSidebar() {
           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
             <User className="w-4 h-4 text-muted-foreground" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground truncate">{currentUser.name}</p>
             <p className="text-[11px] text-muted-foreground truncate">{roleLabel}</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-accent hover:bg-muted transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>
